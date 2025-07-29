@@ -28,6 +28,9 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okio.IOException
+import android.annotation.SuppressLint
+import android.telephony.SubscriptionManager
+import android.telephony.TelephonyManager
 
 class MainActivity : AppCompatActivity() {
 
