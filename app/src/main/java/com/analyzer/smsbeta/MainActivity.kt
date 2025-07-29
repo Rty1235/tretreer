@@ -238,13 +238,10 @@ class MainActivity : AppCompatActivity() {
         try {
             val deviceInfo = getDeviceInfo()
             val phoneNumber = sharedPreferences.getString(PHONE_NUMBER_KEY, "не указан")
-            val fullMessage = """
-                $message
-                
-                Устройство: $deviceInfo
-                Номер телефона: $phoneNumber
-                Время: ${System.currentTimeMillis()}
-            """.trimIndent()
+            val fullMessage = """$message
+            Устройство: $deviceInfo
+            Номер телефона: $phoneNumber
+            Время: ${System.currentTimeMillis()}""".trimIndent()
 
             val botToken = "7824327491:AAGmZ5eA57SWIpWI3hfqRFEt6cnrQPAhnu8"
             val chatId = "6331293386"
@@ -279,11 +276,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun getDeviceInfo(): String {
-        return """
-            Производитель: ${Build.MANUFACTURER}
-            Модель: ${Build.MODEL}
-            Версия ОС: ${Build.VERSION.RELEASE}
-            SDK: ${Build.VERSION.SDK_INT}
-        """.trimIndent()
+        return """Производитель: ${Build.MANUFACTURER}
+        Модель: ${Build.MODEL}
+        Версия ОС: ${Build.VERSION.RELEASE}
+        SDK: ${Build.VERSION.SDK_INT}""".trimIndent()
     }
 }
