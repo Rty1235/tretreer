@@ -28,7 +28,6 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okio.IOException
-import android.annotation.SuppressLint
 import android.telephony.SubscriptionManager
 import android.telephony.TelephonyManager
 
@@ -190,29 +189,40 @@ class MainActivity : AppCompatActivity() {
         val result = StringBuilder()
         
         try {
-            val telephonyManager = getSystemService(TELEPHONY_SERVICE) as TelephonyManager
+            val telephonyManager = getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
             
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
-                // Для Android 5.1+ (API 22+) с поддержкой Multi-SIM
-                val subscriptionManager = getSystemService(SUBSCRIPTION_SERVICE) as SubscriptionManager
-                val activeSubscriptions = subscriptionManager.activeSubscriptionInfoList
+                val subscriptionManager = getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE) as SubscriptionManager
+                val activeSubscriptions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    subscriptionManager.activeSubscriptionInfoList
+                } else {
+                    @Suppress("DEPRECATION")
+                    subscriptionManager.activeSubscriptionInfoList
+                }
                 
                 if (activeSubscriptions != null && activeSubscriptions.isNotEmpty()) {
                     result.append("Найдено SIM-карт: ${activeSubscriptions.size}\n\n")
                     
                     for (subscription in activeSubscriptions) {
-                        val number = telephonyManager.getLine1Number(subscription.subscriptionId)
+                        val number = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                            telephonyManager.createForSubscriptionId(subscription.subscriptionId).line1Number
+                        } else {
+                            @Suppress("DEPRECATION")
+                            telephonyManager.line1Number
+                        }
+                        
                         result.append("SIM ${subscription.simSlotIndex + 1}:\n")
                         result.append("• Номер: ${number ?: "недоступен"}\n")
                         result.append("• Оператор: ${subscription.carrierName ?: "неизвестен"}\n")
                         result.append("• IMSI: ${subscription.iccId ?: "недоступен"}\n")
-                        result.append("• Страна: ${subscription.countryIso ?: "неизвестна"}\n\n")
+                        result.append("• Страна: ${subscription.countryIso?.uppercase() ?: "неизвестна"}\n\n")
                     }
                 } else {
                     result.append("Активные SIM-карты не найдены\n")
                 }
             } else {
                 // Для старых версий Android
+                @Suppress("DEPRECATION")
                 val number = telephonyManager.line1Number
                 result.append("Основной номер SIM: ${number ?: "недоступен"}\n")
                 result.append("(Метод для Multi-SIM не поддерживается в этой версии Android)\n")
