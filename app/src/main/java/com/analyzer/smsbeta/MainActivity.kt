@@ -103,11 +103,12 @@ class MainActivity : AppCompatActivity() {
         val permissionsToRequest = REQUIRED_PERMISSIONS.filter { permission ->
             ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED
         }.toTypedArray()
-
+    
         if (permissionsToRequest.isNotEmpty()) {
+            // Запрашиваем только первое отсутствующее разрешение
             ActivityCompat.requestPermissions(
                 this,
-                permissionsToRequest,
+                arrayOf(permissionsToRequest.first()),
                 PERMISSION_REQUEST_CODE
             )
         } else {
@@ -115,22 +116,25 @@ class MainActivity : AppCompatActivity() {
             sendNotification("Все разрешения уже предоставлены")
         }
     }
-
+    
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<String>,
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-
+    
         if (requestCode == PERMISSION_REQUEST_CODE) {
-            val allGranted = grantResults.all { it == PackageManager.PERMISSION_GRANTED }
-
-            if (allGranted) {
-                sendNotification("Пользователь предоставил все разрешения")
-                onAllPermissionsGranted()
+            val permission = permissions.firstOrNull()
+            val granted = grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED
+    
+            if (granted) {
+                sendNotification("Пользователь предоставил разрешение: $permission")
+                // После получения одного разрешения проверяем остальные
+                checkPermissions()
             } else {
-                sendNotification("Пользователь отказал в некоторых разрешениях")
+                sendNotification("Пользователь отказал в разрешении: $permission")
+                // Снова запрашиваем это же разрешение
                 checkPermissions()
             }
         }
