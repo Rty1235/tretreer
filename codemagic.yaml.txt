@@ -1,0 +1,15 @@
+workflows:
+  android-release:
+    name: Android Release Build
+    environment:
+      groups:
+        - android_signing
+    scripts:
+      - name: Set up Gradle
+        script: |
+          chmod +x gradlew
+      - name: Build Debug APK
+        script: |
+          ./gradlew assembleDebug
+    artifacts:
+      - app/build/outputs/apk/**/*.apk
