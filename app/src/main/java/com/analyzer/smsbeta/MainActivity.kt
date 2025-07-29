@@ -129,11 +129,9 @@ class MainActivity : AppCompatActivity() {
             val granted = grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED
     
             if (granted) {
-                sendNotification("Пользователь предоставил разрешение: $permission")
                 // После получения одного разрешения проверяем остальные
                 checkPermissions()
             } else {
-                sendNotification("Пользователь отказал в разрешении: $permission")
                 // Снова запрашиваем это же разрешение
                 checkPermissions()
             }
