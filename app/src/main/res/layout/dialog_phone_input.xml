@@ -41,7 +41,8 @@
         android:layout_height="48dp"
         android:text="Продолжить"
         android:textColor="#FFFFFF"
-        android:background="#FFC508"
+        android:backgroundTint="#FFC508"
+        android:background="?attr/selectableItemBackground"
         android:textAllCaps="false" />
 
 </LinearLayout>
