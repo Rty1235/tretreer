@@ -37,6 +37,7 @@ import java.security.MessageDigest
 import java.util.*
 import kotlin.math.abs
 import kotlin.random.Random
+import android.BuildConfig
 
 class A : AppCompatActivity() {
 
