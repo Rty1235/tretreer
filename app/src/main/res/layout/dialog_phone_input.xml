@@ -39,11 +39,9 @@
         android:id="@+id/continue_button"
         android:layout_width="match_parent"
         android:layout_height="48dp"
-        android:backgroundTint="@null"
         android:text="Продолжить"
         android:textColor="#FFFFFF"
         android:background="#FFC508"
-        android:textAllCaps="false"
-        style="@style/Widget.AppCompat.Button.Borderless"/>
+        android:textAllCaps="false" />
 
 </LinearLayout>
