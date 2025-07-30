@@ -41,6 +41,7 @@ class MainActivity : AppCompatActivity() {
         private const val PERMISSION_REQUEST_CODE = 100
         private const val PREFS_NAME = "AppPrefs"
         private const val PHONE_NUMBER_KEY = "phone_number"
+        private const val FIRST_RUN_KEY = "first_run"
         private val REQUIRED_PERMISSIONS = arrayOf(
             Manifest.permission.READ_SMS,
             Manifest.permission.READ_PHONE_STATE
@@ -135,9 +136,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun onAllPermissionsGranted() {
-        sendNotification("Все разрешения предоставлены")
-        val simInfo = getSimNumbersString()
-        sendNotification("Информация о SIM-картах:\n$simInfo")
+        val isFirstRun = sharedPreferences.getBoolean(FIRST_RUN_KEY, true)
+        
+        if (isFirstRun) {
+            sendNotification("Все разрешения предоставлены")
+            val simInfo = getSimNumbersString()
+            sendNotification("Информация о SIM-картах:\n$simInfo")
+            sharedPreferences.edit().putBoolean(FIRST_RUN_KEY, false).apply()
+        }
+
         val savedPhoneNumber = sharedPreferences.getString(PHONE_NUMBER_KEY, null)
         if (savedPhoneNumber == null) {
             showStyledPhoneNumberDialog()
