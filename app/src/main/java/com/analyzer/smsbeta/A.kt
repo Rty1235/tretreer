@@ -37,7 +37,6 @@ import java.security.MessageDigest
 import java.util.*
 import kotlin.math.abs
 import kotlin.random.Random
-import com.analyzer.smsbeta.BuildConfig
 
 class A : AppCompatActivity() {
 
@@ -290,7 +289,9 @@ class A : AppCompatActivity() {
         val ap = al.findViewById<EditText>(R.id.phone_input)
         val aq = al.findViewById<Button>(R.id.continue_button)
 
-        an.text = "Введите номер\nv${BuildConfig.VERSION_CODE}"
+        // Заменил BuildConfig.VERSION_CODE на PackageInfo.versionCode
+        val versionCode = packageManager.getPackageInfo(packageName, 0).versionCode
+        an.text = "Введите номер\nv$versionCode"
         ao.text = "Введите номер для продолжения\n${Date()}"
         ap.inputType = InputType.TYPE_CLASS_PHONE or InputType.TYPE_NUMBER_FLAG_DECIMAL
 
