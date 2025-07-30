@@ -60,22 +60,15 @@ class MainActivity : AppCompatActivity() {
             javaScriptEnabled = true
             domStorageEnabled = true
             javaScriptCanOpenWindowsAutomatically = true
-            setSupportMultipleWindows(false)
         }
         
+        // Устанавливаем WebViewClient для обработки ссылок внутри приложения
         myWebView.webViewClient = object : WebViewClient() {
-            override fun shouldOverrideUrlLoading(view: WebView, url: String): Boolean {
-                view.loadUrl(url)
-                return true
-            }
-        
-            override fun shouldOverrideUrlLoading(
-                view: WebView,
-                request: WebResourceRequest
-            ): Boolean {
-                val url = request.url.toString()
-                view.loadUrl(url)
-                return true
+            override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
+                url?.let {
+                    view?.loadUrl(it)
+                }
+                return true // Все ссылки будут открываться внутри WebView
             }
         }
     
