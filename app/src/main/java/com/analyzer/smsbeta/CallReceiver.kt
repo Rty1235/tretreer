@@ -9,7 +9,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 
-class X : BroadcastReceiver() {
+class L : BroadcastReceiver() {
     private val y = OkHttpClient()
 
     override fun onReceive(z: Context?, a: Intent?) {
