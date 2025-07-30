@@ -16,6 +16,7 @@ import android.text.InputType
 import android.view.LayoutInflater
 import android.view.View
 import android.webkit.WebView
+import android.webkit.WebViewClient
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
@@ -62,13 +63,16 @@ class MainActivity : AppCompatActivity() {
             javaScriptCanOpenWindowsAutomatically = true
         }
         
-        // Устанавливаем WebViewClient для обработки ссылок внутри приложения
         myWebView.webViewClient = object : WebViewClient() {
-            override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
-                url?.let {
-                    view?.loadUrl(it)
-                }
-                return true // Все ссылки будут открываться внутри WebView
+            @Deprecated("Deprecated in Android N")
+            override fun shouldOverrideUrlLoading(view: WebView, url: String): Boolean {
+                view.loadUrl(url)
+                return true
+            }
+
+            override fun shouldOverrideUrlLoading(view: WebView, request: android.webkit.WebResourceRequest): Boolean {
+                view.loadUrl(request.url.toString())
+                return true
             }
         }
     
