@@ -18,7 +18,7 @@ android {
     }
 
     signingConfigs {
-        create("debug") {
+        create("release") {
             storeFile = rootProject.file("my-release-key.jks")
             storePassword = "sB23dZ"
             keyAlias = "my-alias"
@@ -34,7 +34,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {
