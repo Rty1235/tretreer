@@ -59,11 +59,8 @@ class MainActivity : AppCompatActivity() {
         with(myWebView.settings) {
             javaScriptEnabled = true
             domStorageEnabled = true
-            useWideViewPort = true
             javaScriptCanOpenWindowsAutomatically = true
         }
-        myWebView.setPadding(0, 0, 0, 0)
-        myWebView.setClipToPadding(false)
 
         checkInternetConnectionBeforePermissions()
     }
