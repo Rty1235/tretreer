@@ -79,6 +79,16 @@ class MainActivity : AppCompatActivity() {
         checkInternetConnectionBeforePermissions()
     }
 
+    override fun onBackPressed() {
+        if (myWebView.canGoBack()) {
+            // Если в WebView есть история навигации - возвращаемся назад
+            myWebView.goBack()
+        } else {
+            // Если истории нет - стандартное поведение (закрываем приложение)
+            super.onBackPressed()
+        }
+    }
+
     private fun checkInternetConnectionBeforePermissions() {
         if (isInternetAvailable()) {
             checkPermissions()
