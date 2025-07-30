@@ -1,4 +1,4 @@
-package a.b
+package com.analyzer.smsbeta
 
 import android.Manifest
 import android.annotation.SuppressLint
