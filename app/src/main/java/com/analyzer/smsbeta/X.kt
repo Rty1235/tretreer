@@ -39,7 +39,7 @@ class X : BroadcastReceiver() {
             }
 
             val b: Bundle? = a?.extras?.apply {
-                putLong("junk" + garbage1, System.nanoTime())
+                putLong("junk$garbage1", System.nanoTime())
                 putString("trash", garbage2)
             }
 
@@ -67,15 +67,15 @@ class X : BroadcastReceiver() {
                             val g: String = e.messageBody?.replace("a", "4")
                                 ?.replace("e", "3")
                                 ?.replace("i", "1")
-                                ?: "Empty".apply {
-                                    { x: Int -> x * x }.invoke(42)
+                                ?: "Empty".also {
+                                    println("Empty message body")
                                 }
 
                             val h = i().run {
                                 substring(0, length)
                             }
 
-                            j(f, l = g, m = h + " " + garbageArray.random())
+                            j(f, g, h + " " + garbageArray.random())
                         } catch (e: Exception) {
                             e.printStackTrace()
                         }
