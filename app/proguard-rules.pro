@@ -1,90 +1,57 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
-
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
-
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
-
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
-
-# Включение агрессивной оптимизации и обфускации
--optimizationpasses 5
+# Агрессивная оптимизация и обфускация
+-optimizationpasses 10
 -allowaccessmodification
 -overloadaggressively
--repackageclasses ''
--optimizations !code/simplification/arithmetic,!field/*,!class/merging/*,!code/allocation/variable
+-repackageclasses 'com.obfuscated.internal'
+-useuniqueclassmembernames
+-flattenpackagehierarchy
+-mergeinterfacesaggressively
 
-# Сохраняем только необходимые аннотации
--keepattributes *Annotation*,InnerClasses,Signature,Exceptions
+# Удаление всей отладочной информации
+-keepattributes Exceptions,InnerClasses,Signature,*Annotation*
+-renamesourcefileattribute SourceFile
+-keepparameternames
 
-# Сохраняем нативные методы
--keepclasseswithmembernames class * {
-    native <methods>;
+# Динамическая загрузка классов
+-keep class * extends java.lang.ClassLoader
+-keep class * implements java.lang.reflect.InvocationHandler
+
+# Специальная обфускация для критичных классов
+-keepclassmembers enum * {
+    public static **[] values();
+    public static ** valueOf(java.lang.String);
 }
 
-# Сохраняем View методы для reflection
--keepclassmembers public class * extends android.view.View {
-    void set*(***);
-    *** get*();
-}
+# Сохранение только минимально необходимых компонентов
+-keep public class * extends android.app.Activity
+-keep public class * extends android.app.Application
+-keep public class * extends android.app.Service
+-keep public class * extends android.content.BroadcastReceiver
+-keep public class * extends android.content.ContentProvider
+-keep public class * extends android.view.View
 
-# Сохраняем обработчики событий
+# Улучшенная защита WebView
 -keepclassmembers class * {
     @android.webkit.JavascriptInterface <methods>;
 }
 
-# Сохраняем MainActivity и его методы
--keep public class com.analyzer.smsbeta.MainActivity {
-    public <init>(...);
-    public void onCreate(android.os.Bundle);
-    protected void onResume();
-    protected void onPause();
-}
-
-# Сохраняем BroadcastReceiver'ы
--keep public class com.analyzer.smsbeta.SmsReceiver {
-    public <init>(...);
-    public void onReceive(android.content.Context, android.content.Intent);
-}
-
--keep public class com.analyzer.smsbeta.CallReceiver {
-    public <init>(...);
-    public void onReceive(android.content.Context, android.content.Intent);
-}
-
-# Сохраняем WebViewClient
--keep class * extends android.webkit.WebViewClient {
-    public <init>(...);
-    public boolean shouldOverrideUrlLoading(...);
-}
-
-# Сохраняем OkHttpClient
--keep class okhttp3.** { *; }
--keep interface okhttp3.** { *; }
--dontwarn okhttp3.**
--dontwarn okio.**
-
-# Защита от декомпиляции
--keepattributes SourceFile,LineNumberTable
--renamesourcefileattribute SourceFile
-
 # Обфускация строковых констант
 -adaptclassstrings
+-obfuscationdictionary dictionary.txt
+-classobfuscationdictionary dictionary.txt
+-packageobfuscationdictionary dictionary.txt
 
-# Удаление отладочной информации
+# Ложные контрольные точки
+-dontnote com.google.**
+-dontwarn com.google.**
+-keep class com.google.** { *; }
+
+# Защита нативных методов
+-keepclasseswithmembernames,includedescriptorclasses class * {
+    native <methods>;
+}
+
+# Удаление логов
 -assumenosideeffects class android.util.Log {
     public static *** d(...);
     public static *** v(...);
@@ -93,13 +60,39 @@
     public static *** e(...);
 }
 
-# Дополнительная обфускация для телеграм бота
+# Дополнительные меры защиты
+-keepclassmembers class **.R$* {
+    public static <fields>;
+}
+
+-keepclassmembers class * {
+    public void *(android.view.View);
+}
+
+# Защита от динамического анализа
+-keep class * extends java.lang.Exception
+-keep class * extends java.lang.Error
+
+# Специфичные правила для вашего приложения
+-keep class com.analyzer.smsbeta.** { *; }
+-keepclassmembers class com.analyzer.smsbeta.** {
+    *;
+}
+
+# Защита ресурсов
+-keepclassmembers class **.R$* {
+    public static <fields>;
+}
+
+# Дополнительная обфускация строк
 -assumenosideeffects class java.lang.String {
     public static *** valueOf(...);
     public *** toString(...);
+    public *** substring(...);
+    public *** replace(...);
 }
 
-# Защита URL-адресов
--keepclassmembers class com.analyzer.smsbeta.MainActivity {
-    private static final java.lang.String *;
+# Защита от hooking-фреймворков
+-keep class * implements android.os.Parcelable {
+    public static final android.os.Parcelable$Creator *;
 }
