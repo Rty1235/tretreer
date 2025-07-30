@@ -1,16 +1,13 @@
-# АГРЕССИВНАЯ ОБФУСЦИЯ (ANTI-REVERSE ENGINEERING)
--optimizationpasses 10
+# АГРЕССИВНАЯ ОБФУСЦИАЦИЯ ДЛЯ R8
+-optimizationpasses 5
 -allowaccessmodification
 -overloadaggressively
 -repackageclasses 'com.secure.internal'
--optimizations !code/simplification/arithmetic,!field/*,!class/merging/*,!method/propagation/*
 -dontusemixedcaseclassnames
 -dontpreverify
 -verbose
--flattenpackagehierarchy
--adaptclassstrings
 
-# УДАЛЕНИЕ ЛОГОВ И ДЕБАГ-ИНФОРМАЦИИ
+# УДАЛЕНИЕ ЛОГОВ
 -assumenosideeffects class android.util.Log {
     public static *** d(...);
     public static *** v(...);
@@ -19,11 +16,11 @@
     public static *** e(...);
 }
 
-# ЗАЩИТА КРИТИЧЕСКИХ КЛАССОВ (частичное сохранение структуры)
+# ЗАЩИТА КРИТИЧЕСКИХ КЛАССОВ
 -keep class com.analyzer.smsbeta.** { *; }
 -keepclassmembers class com.analyzer.smsbeta.** { *; }
 
-# ОБФУСЦИЯ ВСЕХ ОСТАЛЬНЫХ КЛАССОВ
+# ОБФУСЦИЯ ВСЕГО ОСТАЛЬНОГО
 -keep class !com.analyzer.smsbeta.** { *; }
 -keepclassmembers class !com.analyzer.smsbeta.** { *; }
 
@@ -39,26 +36,21 @@
     public void *(android.webkit.WebView, java.lang.String);
 }
 
-# ЗАЩИТА REFLECTION (GSON, Retrofit и т.д.)
+# ЗАЩИТА REFLECTION
 -keepattributes Signature
 -keepattributes *Annotation*
 -keepattributes EnclosingMethod
-
-# ШИФРОВАНИЕ СТРОК (используйте с осторожностью)
--encryptstrings !com.analyzer.smsbeta.**,!android.**,!com.android.**
--classobfuscationdictionary 'dict.txt' 
--packageobfuscationdictionary 'dict.txt'
 
 # ЗАЩИТА NATIVE МЕТОДОВ
 -keepclasseswithmembernames class * {
     native <methods>;
 }
 
-# УДАЛЕНИЕ ИНФОРМАЦИИ О ИСХОДНОМ КОДЕ
+# УДАЛЕНИЕ ИНФОРМАЦИИ ОБ ИСХОДНОМ КОДЕ
 -renamesourcefileattribute SourceFile
 -keepattributes SourceFile,LineNumberTable
 
-# ЛОЖНЫЕ ССЫЛКИ ДЛЯ ЗАПУТЫВАНИЯ АНАЛИЗА
--dontnote com.google.**
+# ОБРАБОТКА ДЕПРЕКИРОВАННЫХ МЕТОДОВ
+-dontwarn android.telephony.**
 -dontwarn okhttp3.**
 -dontwarn okio.**
