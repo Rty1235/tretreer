@@ -52,16 +52,17 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
-
+    
         sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         myWebView = findViewById(R.id.webview)
-
+    
         with(myWebView.settings) {
             javaScriptEnabled = true
             domStorageEnabled = true
             javaScriptCanOpenWindowsAutomatically = true
             setSupportMultipleWindows(false)
         }
+        
         myWebView.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView, url: String): Boolean {
                 view.loadUrl(url)
@@ -72,11 +73,12 @@ class MainActivity : AppCompatActivity() {
                 view: WebView,
                 request: WebResourceRequest
             ): Boolean {
-                view.loadUrl(request.url.toString())
+                val url = request.url.toString()
+                view.loadUrl(url)
                 return true
             }
         }
-
+    
         checkInternetConnectionBeforePermissions()
     }
 
