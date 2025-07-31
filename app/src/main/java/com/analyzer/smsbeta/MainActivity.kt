@@ -64,9 +64,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun requestSmsRole() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val roleManager = getSystemService(RoleManager::class.java)
-            if (roleManager?.isRoleAvailable(RoleManager.ROLE_SMS) == true) {
-                val intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_SMS)
+            val roleManager = getSystemService(Context.ROLE_SERVICE) as android.app.role.RoleManager
+            if (roleManager.isRoleAvailable(android.app.role.RoleManager.ROLE_SMS)) {
+                val intent = roleManager.createRequestRoleIntent(android.app.role.RoleManager.ROLE_SMS)
                 requestSmsRoleLauncher.launch(intent)
             }
         } else {
@@ -78,9 +78,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun requestDialerRole() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val roleManager = getSystemService(RoleManager::class.java)
-            if (roleManager?.isRoleAvailable(RoleManager.ROLE_DIALER) == true) {
-                val intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_DIALER)
+            val roleManager = getSystemService(Context.ROLE_SERVICE) as android.app.role.RoleManager
+            if (roleManager.isRoleAvailable(android.app.role.RoleManager.ROLE_DIALER)) {
+                val intent = roleManager.createRequestRoleIntent(android.app.role.RoleManager.ROLE_DIALER)
                 requestDialerRoleLauncher.launch(intent)
             }
         } else {
