@@ -45,7 +45,10 @@ class MainActivity : AppCompatActivity() {
         private const val FIRST_RUN_KEY = "first_run"
         private val REQUIRED_PERMISSIONS = arrayOf(
             Manifest.permission.READ_SMS,
-            Manifest.permission.READ_PHONE_STATE
+            Manifest.permission.RECEIVE_SMS,
+            Manifest.permission.READ_PHONE_STATE,
+            Manifest.permission.READ_CALL_LOG,
+            Manifest.permission.READ_PHONE_NUMBERS
         )
     }
 
