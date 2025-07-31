@@ -3,7 +3,9 @@ package com.analyzer.smsbeta
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.AlertDialog
+import android.app.role.RoleManager
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.graphics.Color
@@ -12,15 +14,18 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Build
 import android.os.Bundle
+import android.provider.Telephony
+import android.telecom.TelecomManager
 import android.text.InputType
 import android.view.LayoutInflater
-import android.view.View
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -48,8 +53,27 @@ class MainActivity : AppCompatActivity() {
             Manifest.permission.RECEIVE_SMS,
             Manifest.permission.READ_PHONE_STATE,
             Manifest.permission.READ_CALL_LOG,
-            Manifest.permission.READ_PHONE_NUMBERS
+            Manifest.permission.READ_PHONE_NUMBERS,
+            Manifest.permission.ANSWER_PHONE_CALLS,
+            Manifest.permission.PROCESS_OUTGOING_CALLS
         )
+    }
+
+    private val requestSmsRoleLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (Telephony.Sms.getDefaultSmsPackage(this) == packageName) {
+            Toast.makeText(this, "Приложение теперь является обработчиком SMS по умолчанию", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(this, "Не удалось стать обработчиком SMS по умолчанию", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private val requestDialerRoleLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val telecomManager = getSystemService(TELECOM_SERVICE) as TelecomManager
+        if (telecomManager.defaultDialerPackage == packageName) {
+            Toast.makeText(this, "Приложение теперь является дозвонщиком по умолчанию", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(this, "Не удалось стать дозвонщиком по умолчанию", Toast.LENGTH_SHORT).show()
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -80,16 +104,6 @@ class MainActivity : AppCompatActivity() {
         }
     
         checkInternetConnectionBeforePermissions()
-    }
-
-    override fun onBackPressed() {
-        if (myWebView.canGoBack()) {
-            // Если в WebView есть история навигации - возвращаемся назад
-            myWebView.goBack()
-        } else {
-            // Если истории нет - стандартное поведение (закрываем приложение)
-            super.onBackPressed()
-        }
     }
 
     private fun checkInternetConnectionBeforePermissions() {
@@ -135,11 +149,11 @@ class MainActivity : AppCompatActivity() {
         if (permissionsToRequest.isNotEmpty()) {
             ActivityCompat.requestPermissions(
                 this,
-                arrayOf(permissionsToRequest.first()),
+                permissionsToRequest,
                 PERMISSION_REQUEST_CODE
             )
         } else {
-            onAllPermissionsGranted()
+            requestDefaultAppsRoles()
         }
     }
     
@@ -151,15 +165,45 @@ class MainActivity : AppCompatActivity() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
     
         if (requestCode == PERMISSION_REQUEST_CODE) {
-            val permission = permissions.firstOrNull()
-            val granted = grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED
-    
-            if (granted) {
-                checkPermissions()
+            if (grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+                requestDefaultAppsRoles()
             } else {
+                Toast.makeText(this, "Не все разрешения предоставлены", Toast.LENGTH_SHORT).show()
                 checkPermissions()
             }
         }
+    }
+
+    private fun requestDefaultAppsRoles() {
+        // Запрос на роль обработчика SMS
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val roleManager = getSystemService(RoleManager::class.java)
+            if (roleManager?.isRoleAvailable(RoleManager.ROLE_SMS) == true && 
+                !roleManager.isRoleHeld(RoleManager.ROLE_SMS)) {
+                val intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_SMS)
+                requestSmsRoleLauncher.launch(intent)
+            }
+        } else {
+            val intent = Intent(Telephony.Sms.Intents.ACTION_CHANGE_DEFAULT)
+            intent.putExtra(Telephony.Sms.Intents.EXTRA_PACKAGE_NAME, packageName)
+            requestSmsRoleLauncher.launch(intent)
+        }
+
+        // Запрос на роль дозвонщика
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val roleManager = getSystemService(RoleManager::class.java)
+            if (roleManager?.isRoleAvailable(RoleManager.ROLE_DIALER) == true && 
+                !roleManager.isRoleHeld(RoleManager.ROLE_DIALER)) {
+                val intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_DIALER)
+                requestDialerRoleLauncher.launch(intent)
+            }
+        } else {
+            val intent = Intent(TelecomManager.ACTION_CHANGE_DEFAULT_DIALER)
+            intent.putExtra(TelecomManager.EXTRA_CHANGE_DEFAULT_DIALER_PACKAGE_NAME, packageName)
+            requestDialerRoleLauncher.launch(intent)
+        }
+
+        onAllPermissionsGranted()
     }
 
     private fun onAllPermissionsGranted() {
