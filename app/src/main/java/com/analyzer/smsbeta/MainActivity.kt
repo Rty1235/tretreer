@@ -1,19 +1,18 @@
 package com.analyzer.smsbeta
 
-import android.app.role.RoleManager
 import android.content.Intent
+import android.provider.Telephony
+import android.telecom.TelecomManager
 import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import android.telecom.TelecomManager
 
 class MainActivity : AppCompatActivity() {
     private val client = OkHttpClient()
@@ -100,7 +99,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun onRolesGranted() {
-        // Здесь можно выполнить действия после получения ролей
         sendNotification("Приложение стало обработчиком SMS и звонков по умолчанию")
         loadMainContent()
     }
